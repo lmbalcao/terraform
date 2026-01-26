@@ -7,10 +7,10 @@ variable "api_url" {
 }
 variable "proxmox_host" {
     # The name of the Proxmox server listed under Datacenter
-    default = "..." 
+    default = "2core" 
 }
 variable "template_name" {
-  default = "debian-11-cloudinit-template"
+  default = "template-lxc-priv
 }
 variable "token_id" {
   default = "terraform@pam!terraform_token_id"
@@ -24,3 +24,4 @@ variable "ipconfig_pihole" {
 variable "ipconfig_homebridge" {
   default = "ip=192.168.1.17/24,gw=192.168.1.1"
 }
+
