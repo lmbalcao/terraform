@@ -1,10 +1,9 @@
-# Proxmox
-
+# Proxmox Telmate
 terraform {
   required_providers {
     proxmox = {
-      source = "Terraform-for-Proxmox/proxmox"
-      version = "0.0.1"
+      source  = "Telmate/proxmox"
+      version = "= 3.0.2-rc07"
     }
   }
 }
@@ -22,6 +21,11 @@ variable "proxmox_api_token_id" {
 }
 
 variable "proxmox_api_token" {
+    type = string
+  
+}
+
+variable "root_password" {
     type = string
   
 }
