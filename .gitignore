@@ -1,0 +1,95 @@
+# -----------------------
+# Regras Gerais
+# -----------------------
+
+# Logs
+*.log
+logs/
+*.pid
+
+# Caches e temporários
+*.tmp
+*.swp
+*.bak
+*.old
+*~
+.DS_Store
+Thumbs.db
+
+# Diretórios temporários comuns
+node_modules/
+__pycache__/
+.cache/
+dist/
+build/
+tmp/
+
+# -----------------------
+# Docker / Compose
+# -----------------------
+*.pid
+.env.local
+.envrc
+docker-compose.override.yml
+.docker/
+.volumes/
+data/
+secrets/
+
+# -----------------------
+# SOPS / Encriptação
+# -----------------------
+
+# Ficheiros desencriptados temporários
+*.decrypted~
+*.unencrypted
+*.plain
+*.bak
+*.tmp
+*.sops.yaml~
+*.sops.yml~
+
+# Permitir ficheiros encriptados
+!*.sops.yaml
+!*.sops.yml
+!*.sops.env
+
+# Ficheiros SOPS auxiliares
+.sops.yaml
+.agekey
+age.txt
+
+# -----------------------
+# Git / VSCode
+# -----------------------
+
+# Configurações locais de IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Repositórios Git internos (ex: submódulos errados)
+**/.git/
+**/.github/
+!/.github/     # mantém o diretório de workflows
+
+# -----------------------
+# Sistema Operativo
+# -----------------------
+ehthumbs.db
+desktop.ini
+Icon?
+.Spotlight-V100
+.Trashes
+
+.decrypted~*
+*.unencrypted
+*.plain
+*.sops.yaml~
+*.sops.yml~
+
+#
+# Terraform Vars
+#
+
+*.tfvars
