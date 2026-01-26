@@ -27,7 +27,8 @@ tmp/
 # -----------------------
 # Docker / Compose
 # -----------------------
-*.pid
+
+.env
 .env.local
 .envrc
 docker-compose.override.yml
@@ -40,56 +41,71 @@ secrets/
 # SOPS / Encriptação
 # -----------------------
 
-# Ficheiros desencriptados temporários
+# Ficheiros desencriptados / temporários
 *.decrypted~
 *.unencrypted
 *.plain
-*.bak
-*.tmp
 *.sops.yaml~
 *.sops.yml~
+*.bak
+*.tmp
 
 # Permitir ficheiros encriptados
 !*.sops.yaml
 !*.sops.yml
 !*.sops.env
 
-# Ficheiros SOPS auxiliares
-.sops.yaml
+# Ficheiros auxiliares sensíveis
 .agekey
 age.txt
 
 # -----------------------
-# Git / VSCode
+# Terraform
 # -----------------------
 
-# Configurações locais de IDE
+# Diretório local do Terraform
+.terraform/
+
+# Estado (NUNCA versionar)
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*
+crash.log
+
+# Variáveis sensíveis
+*.tfvars
+*.tfvars.json
+
+# Overrides locais
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config local
+.terraformrc
+terraform.rc
+
+# -----------------------
+# Git / IDEs
+# -----------------------
+
 .vscode/
 .idea/
 *.code-workspace
 
-# Repositórios Git internos (ex: submódulos errados)
+# Repositórios Git aninhados acidentais
 **/.git/
-**/.github/
-!/.github/     # mantém o diretório de workflows
+
+# GitHub workflows (manter)
+!/.github/
 
 # -----------------------
 # Sistema Operativo
 # -----------------------
+
 ehthumbs.db
 desktop.ini
 Icon?
 .Spotlight-V100
 .Trashes
-
-.decrypted~*
-*.unencrypted
-*.plain
-*.sops.yaml~
-*.sops.yml~
-
-#
-# Terraform Vars
-#
-
-*.tfvars
