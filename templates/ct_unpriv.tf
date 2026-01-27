@@ -1,9 +1,9 @@
 resource "proxmox_lxc" "NOME_QUE_EU_QUISER" {
-  target_node  = "2core"
+  target_node  = var.target_node
   hostname     = "teste"
   vmid = "1000"
   description  = "descricao"
-  ostemplate = "nas1:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+  ostemplate   = var.ostemplate
   password     = var.root_password
   unprivileged = true
 
@@ -16,29 +16,24 @@ resource "proxmox_lxc" "NOME_QUE_EU_QUISER" {
 
   features { 
     nesting = true
-    fuse = true
-    keyctl = true
   }
   
-  ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGTjuFbMX06wv9YLknc4UrkNsMnmsan1158Qxfoi+knc root@rundeck
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4xPGgehPGBTd4k/KVWju1arRvzyr3E6H8Sp8wjWEbI vscode-homelab
-  EOT
+  ssh_public_keys = join("\n", var.ssh_public_keys)
 
   # DNS (ajusta o IP se o teu DNS não for o gateway)
-  nameserver   = "192.168.50.1"
-  searchdomain = "lbtec.org"
+  nameserver = "192.168.17.1"
+  searchdomain = var.searchdomain
 
   rootfs {
-    storage = "local"
+    storage = var.storage
     size    = "2G"
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    tag    = 50
-    ip     = "192.168.50.125/24"
-    gw     = "192.168.50.1"
+    tag    = "17"
+    ip     = "192.168.17.125/24"
+    gw     = "192.168.17.1"
   }
 }

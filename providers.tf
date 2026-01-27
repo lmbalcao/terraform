@@ -8,28 +8,6 @@ terraform {
   }
 }
 
-# Variaveis usadas
-
-variable "proxmox_api_url" {
-    type = string
-  
-}
-
-variable "proxmox_api_token_id" {
-    type = string
-  
-}
-
-variable "proxmox_api_token" {
-    type = string
-  
-}
-
-variable "root_password" {
-    type = string
-  
-}
-
 provider "proxmox" {
   # Configuration options
   pm_api_url = var.proxmox_api_url
