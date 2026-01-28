@@ -1,5 +1,8 @@
 Terraform + Proxmox + Rundeck
 
+fluxo:
+terraform apply -> add/remove no proxmox -> job rundeck
+
 1. tenho o inventory.tf onde defino requisitos individuais para cada ct
           enabled      = true / false
           true -> aplica
@@ -22,3 +25,11 @@ problemas:
 
 NOTA:
     terraform apply -auto-approve -> remove a necessidade de escrever yes
+
+2. Integração com rundeck -> já funciona com integracao basica
+2.1 decidir o que quero colocar no script do rundeck a aplicar em cada host
+    -> definicoes gerais para todos os hosts
+        - ntp
+        - logs
+        - permissoes ssh
+        - 

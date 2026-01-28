@@ -3,7 +3,7 @@ locals {
     ct_web = {
       enabled      = false
       vlan         = 17
-      campo_meu    = 33
+      ultimo_octeto    = 66 # Sempre entre 2 e 254
       target_node  = "2core"
       hostname     = "teste-web"
       description  = "descricao web"
@@ -28,12 +28,12 @@ locals {
     ct_db = {
       enabled      = false
       vlan         = 60
-      campo_meu    = 158
+      ultimo_octeto    = 66
       target_node  = "4core"
       hostname     = "teste-db"
       description  = "descricao db"
       ostemplate   = var.ostemplate
-      unprivileged = false
+      unprivileged = true
 
       cores  = 2
       memory = 2048

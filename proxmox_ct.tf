@@ -1,4 +1,4 @@
-# ct.tf (ou lxc.tf) - Recurso único que cria N CTs a partir do inventário
+# proxmox_ct.tf (ou lxc.tf) - Recurso único que cria N CTs a partir do inventário
 
 resource "proxmox_lxc" "cts" {
   for_each = {
@@ -12,8 +12,8 @@ resource "proxmox_lxc" "cts" {
   ostemplate   = each.value.ostemplate
   unprivileged = each.value.unprivileged
 
-  # vmid = concat(vlan, campo_meu)  (ex.: 25 + 200 -> 25200; 14 + 13 -> 1413)
-  vmid = tonumber("${each.value.vlan}${each.value.campo_meu}")
+  # vmid = concat(vlan, ultimo_octeto)  (ex.: 25 + 200 -> 25200; 14 + 13 -> 1413)
+  vmid = tonumber("${each.value.vlan}${each.value.ultimo_octeto}")
 
   password = var.root_password
 
@@ -44,7 +44,7 @@ resource "proxmox_lxc" "cts" {
     bridge = "vmbr0"
     tag    = each.value.vlan
 
-    ip = "192.168.${each.value.vlan}.${each.value.campo_meu}/24"
+    ip = "192.168.${each.value.vlan}.${each.value.ultimo_octeto}/24"
     gw = "192.168.${each.value.vlan}.1"
   }
 }

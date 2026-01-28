@@ -35,3 +35,23 @@ variable "searchdomain" {
     type = string
   
 }
+
+variable "rundeck_api_token" {
+    type = string
+  
+}
+
+variable "rundeck_url" {
+    type = string
+  
+}
+
+variable "rundeck_job_id" {
+  type = string
+
+}
+
+variable "rundeck_project" {
+  type    = string
+
+}

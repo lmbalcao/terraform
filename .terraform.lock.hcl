@@ -1,6 +1,47 @@
 # This file is maintained automatically by "terraform init".
 # Manual edits may be lost in future updates.
 
+provider "registry.terraform.io/hashicorp/null" {
+  version = "3.2.4"
+  hashes = [
+    "h1:hkf5w5B6q8e2A42ND2CjAvgvSN3puAosDmOJb3zCVQM=",
+    "zh:59f6b52ab4ff35739647f9509ee6d93d7c032985d9f8c6237d1f8a59471bbbe2",
+    "zh:78d5eefdd9e494defcb3c68d282b8f96630502cac21d1ea161f53cfe9bb483b3",
+    "zh:795c897119ff082133150121d39ff26cb5f89a730a2c8c26f3a9c1abf81a9c43",
+    "zh:7b9c7b16f118fbc2b05a983817b8ce2f86df125857966ad356353baf4bff5c0a",
+    "zh:85e33ab43e0e1726e5f97a874b8e24820b6565ff8076523cc2922ba671492991",
+    "zh:9d32ac3619cfc93eb3c4f423492a8e0f79db05fec58e449dee9b2d5873d5f69f",
+    "zh:9e15c3c9dd8e0d1e3731841d44c34571b6c97f5b95e8296a45318b94e5287a6e",
+    "zh:b4c2ab35d1b7696c30b64bf2c0f3a62329107bd1a9121ce70683dec58af19615",
+    "zh:c43723e8cc65bcdf5e0c92581dcbbdcbdcf18b8d2037406a5f2033b1e22de442",
+    "zh:ceb5495d9c31bfb299d246ab333f08c7fb0d67a4f82681fbf47f2a21c3e11ab5",
+    "zh:e171026b3659305c558d9804062762d168f50ba02b88b231d20ec99578a6233f",
+    "zh:ed0fe2acdb61330b01841fa790be00ec6beaac91d41f311fb8254f74eb6a711f",
+  ]
+}
+
+provider "registry.terraform.io/rundeck/rundeck" {
+  version     = "0.4.7"
+  constraints = "0.4.7"
+  hashes = [
+    "h1:H83HShzv4BWIy5JEkJnSB0hun1xUkt4Hu2AMKSDzeCw=",
+    "zh:0897bd662dbfaac4c2cab82e54da9585a46d08216c9ccb987cc2227c3a695d2f",
+    "zh:13506ec24da6c14bcc20e3a62b21db0dc364b68e8eece6b8fa5ec3b7c0d0e87d",
+    "zh:2f983259f244942388cba872b8594f19a736d4c734c2d2d9a4d8f9ce34535ac6",
+    "zh:40514bcbe9c34b0ca9e7dc27164eecfe18895511faf291c0481dd96d2dc2061d",
+    "zh:69bf8a5e16abbea905c9ad9585adeeaab37894322aac51756c83a46fff58b8f8",
+    "zh:71b18096e946f9ba651692bf02efdc4022e8dcaa5b78d54b75aac9f4e7f06149",
+    "zh:975af9a7f0030e0bb57f1b07c4d57647d2c6795a4a78f290aae5960daa5049f5",
+    "zh:a471956a759272c984b6ac23c1b641936a6778c1643f403a9ad6e1e351434e64",
+    "zh:ac95c205569cb7d662df8ab73c320a848b57b94b61532998f58c3992eeceef1b",
+    "zh:b58013431cbd262aaff9f21834d0b883d8f3416491f1e2897e294a26f0727cfc",
+    "zh:d041ce1171d3430a79b25ea12dcf2f4c7d2063d85cc23c5408dc9eb1aab453c9",
+    "zh:e3587da723189a5a549b7a8ac8879349d7b9064b6125a00963b262a1fca2da8e",
+    "zh:e81966e3e3083b3c3ce28edddae3f28475b90d53193a580474b442a24128aa85",
+    "zh:ff9e41bfc7dec7e845155b9a8455a6b01f5e0390177289a7ef7a314564f87562",
+  ]
+}
+
 provider "registry.terraform.io/telmate/proxmox" {
   version     = "3.0.2-rc07"
   constraints = "3.0.2-rc07"
