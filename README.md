@@ -48,7 +48,7 @@ NOTA:
         - Política de limpeza de imagens/containers antigos
         - Banner de login (identificação + aviso legal) -> MOTD e shel comum
 
-3. Quando Terraform geral contentor, verificar local de backups pelo VMID e copiar para o host os dados guardados
+3. Quando Terraform gerar contentor, verificar local de backups pelo VMID e copiar para o host os dados guardados
 
 4. acrescentar mais variaveis ao ct_proxmox (tags, ha, ...)
 
