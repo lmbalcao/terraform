@@ -31,5 +31,21 @@ NOTA:
     -> definicoes gerais para todos os hosts
         - ntp
         - logs
+        - Agente de métricas (node_exporter, telegraf, etc.)
+        - Agente de logs (vector, promtail, fluent-bit, etc.)
+        - Healthchecks locais (serviços críticos)
         - permissoes ssh
-        - 
+        - Definição consistente de timezone e locale
+        - Política comum de gestão de utilizadores e grupos
+        - Política de sudo padronizada
+        - Limpeza automática de pacotes órfãos e caches
+        - Fail2ban ou equivalente
+        - Política comum de rotação de logs
+        - Auditoria básica (auditd)
+        - Versão de Docker padronizada
+        - Configuração comum do daemon (log driver, cgroups, storage)
+        - Diretórios padrão para volumes
+        - Política de limpeza de imagens/containers antigos
+        - Banner de login (identificação + aviso legal) -> MOTD e shel comum
+
+3. Quando Terraform geral contentor, verificar local de backups pelo VMID e copiar para o host os dados guardados
