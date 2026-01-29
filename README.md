@@ -55,3 +55,5 @@ NOTA:
 5. ct's com docker, como fazer?
 
 6. implementar hashivault
+
+7. colocar tudo numa nuvem com execucao pela cloud???
