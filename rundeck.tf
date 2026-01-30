@@ -6,14 +6,14 @@
 ###############################################################################
 
 locals {
-  enabled_cts = {
+  enabled_cts_rundeck = {
     for name, ct in local.cts : name => ct
     if try(ct.enabled, true)
   }
 }
 
 resource "null_resource" "run_rundeck_job_per_ct" {
-  for_each = local.enabled_cts
+  for_each = local.enabled_cts_rundeck
 
   triggers = {
     project   = var.rundeck_project
