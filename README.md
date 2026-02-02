@@ -26,7 +26,7 @@ problemas:
 NOTA:
     terraform apply -auto-approve -> remove a necessidade de escrever yes
 
-2. Integração com rundeck -> já funciona com integracao basica
+2. Integração com rundeck -> já funciona com integracao basica FEITO
 2.1 decidir o que quero colocar no script do rundeck a aplicar em cada host
     -> definicoes gerais para todos os hosts
         - ntp
@@ -57,3 +57,9 @@ NOTA:
 6. implementar hashivault
 
 7. colocar tudo numa nuvem com execucao pela cloud???
+
+
+
+export RESTIC_REPOSITORY="/mnt/pve/nas1/backups/docker-data/restic-repo"
+export RESTIC_PASSWORD="*RtqZQR4TpWib3"
+restic snapshots
