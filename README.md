@@ -48,11 +48,11 @@ NOTA:
         - Política de limpeza de imagens/containers antigos
         - Banner de login (identificação + aviso legal) -> MOTD e shel comum
 
-3. Quando Terraform gerar contentor, verificar local de backups pelo VMID e copiar para o host os dados guardados
+3. Quando Terraform gerar contentor, verificar local de backups pelo VMID e copiar para o host os dados guardados FEITO
 
-4. acrescentar mais variaveis ao ct_proxmox (tags, ha, ...)
+4. acrescentar mais variaveis ao ct_proxmox (tags, ha, ...) ADICIONEI TAGS APENAS
 
-5. ct's com docker, como fazer?
+5. ct's com docker, como fazer? FEITO
 
 6. implementar hashivault
 
