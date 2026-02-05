@@ -19,8 +19,8 @@ variable "forgejo_user" {
 }
 
 variable "forgejo_token" {
-  type        = string
-#  sensitive   = true
+  type = string
+  #  sensitive   = true
   description = "Token Forgejo (repo privado). Deixar vazio se público."
 }
 

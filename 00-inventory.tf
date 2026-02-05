@@ -1,94 +1,139 @@
+###############################################################################
+# inventory.tf - Inventário (CORRIGIDO)
+# - Fecha chaves em falta
+# - Normaliza mountpoints (lista de objetos) para todos os CTs
+###############################################################################
+
 locals {
   cts = {
-    ct_teste = {
-      enabled         = true
-      vlan            = 35
-      ultimo_octeto   = 99
-      target_node     = "2core"
-      hostname        = "teste-com-homarr"
-      description     = "Criação e Deploy de Homarr"
-      tags            = ["teste", "terraform"]
-      ostemplate      = var.ostemplate
-      unprivileged    = true
-
-      cores  = 1
-      memory = 2048
-      swap   = 1024
-
-      onboot = true
-      start  = true
-
-      storage = "local"
-      size    = "8G"
-
-      # ✅ Features agora são lidas dinamicamente
-      features = {
-        nesting = true
-        fuse    = false
-        keyctl  = false
-        # mount = "nfs;cifs"  # Opcional
-      }
-
-      apps = ["sonarr"]
-    }
-
-    ct_web = {
-      enabled         = true
-      vlan            = 17
-      ultimo_octeto   = 45
-      target_node     = "4core"
-      hostname        = "teste4core"
-      description     = "Criação e Deploy de Homarr"
-      tags            = ["teste", "terraform"]
-      ostemplate      = var.ostemplate
-      unprivileged    = true
-
-      cores  = 1
-      memory = 2048
-      swap   = 1024
-
-      onboot = true
-      start  = true
-
-      storage = "local"
-      size    = "8G"
-
-      # ✅ Features agora são lidas dinamicamente
-      features = {
-        nesting = true
-        fuse    = false
-        keyctl  = false
-        # mount = "nfs;cifs"  # Opcional
-      }
-
-      apps = ["homarr"]
-    }
-
-    ct_db = {
-      enabled         = true
-      vlan            = 17
-      ultimo_octeto   = 67
-      target_node     = "6core"
-      hostname        = "teste-db"
-      description     = "descricao db"
-      tags            = ["teste", "terraform"]      
-      ostemplate      = var.ostemplate
-      unprivileged    = true
+    homarr = {
+      enabled       = true
+      vlan          = 60
+      ultimo_octeto = 11
+      target_node   = "2core"
+      hostname      = "homarr"
+      tags          = ["60-servicos-externos"]
+      ostemplate    = var.ostemplate
+      unprivileged  = true
 
       cores  = 2
       memory = 2048
-      swap   = 2048
+      swap   = 1024
 
       onboot = true
       start  = true
 
       storage = "local"
-      size    = "2G"
+      size    = "8G"
 
-      # ✅ Se não especificares, usa defaults (nesting=true, resto=false)
-      # features = {}  # Opcional, pode omitir
+      features = {
+        nesting = true
+      }
 
-      apps = ["rambo", "authentik", "sonarr"]
+      features_manual = {
+        keyctl = false
+        fuse   = false
+        mount  = ""
+        create = false
+      }
+
+      controlo_manual = {
+        run_restic_restore = false
+        run_rundeck        = false
+      }
+
+      apps = ["homarr"]
+
+      mountpoints = []
     }
+
+    paperless = {
+      enabled       = true
+      vlan          = 60
+      ultimo_octeto = 6
+      target_node   = "4core"
+      hostname      = "paperless"
+      tags          = []
+      ostemplate    = var.ostemplate
+      unprivileged  = true
+
+      cores  = 2
+      memory = 2048
+      swap   = 1024
+
+      onboot = true
+      start  = true
+
+      storage = "local"
+      size    = "8G"
+
+      features = {
+        nesting = true
+      }
+
+      features_manual = {
+        keyctl = false
+        fuse   = false
+        mount  = ""
+        create = false
+      }
+
+      controlo_manual = {
+        run_restic_restore = false
+        run_rundeck        = false
+      }
+
+      apps = ["paperless"]
+
+      pct_mounts = [
+        {
+          slot       = "mp0"
+          host_path  = "/mnt/data/paperless"
+          guest_path = "/mnt/data"
+          backup     = false
+          read_only  = false
+        }
+      ]
+    }
+  }
+
+  vms = {
+    vm_template = {
+      enabled       = false
+      vlan          = 17
+      ultimo_octeto = 80
+      target_node   = "6core"
+      name          = "vm-template"
+      tags          = []
+
+      cores   = 2
+      sockets = 1
+      memory  = 2048
+
+      start_at_node_boot = true
+      vm_state           = "running"
+
+      storage = "local"
+      size    = "20G"
+
+      controlo_manual = {
+        run_restic_restore = false
+        run_rundeck        = false
+      }
+
+      clone      = null
+      ostemplate = var.ostemplate
+    }
+  }
+
+  # Filtra apenas recursos enabled
+  enabled_cts = {
+    for name, ct in local.cts : name => ct
+    if lookup(ct, "enabled", true)
+  }
+  
+  enabled_vms = {
+    for name, vm in local.vms : name => vm
+    if lookup(vm, "enabled", true)
   }
 }

@@ -18,3 +18,5 @@ variable "ssh_private_key_path" {
   type        = string
   description = "Caminho da chave SSH privada para acesso aos nodes Proxmox"
 }
+
+

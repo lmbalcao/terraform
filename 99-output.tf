@@ -6,15 +6,14 @@ output "created_cts" {
   description = "CTs criados pelo Terraform"
   value = {
     for name, ct in local.enabled_cts : name => {
-      hostname         = ct.hostname
-      ip               = "192.168.${ct.vlan}.${ct.ultimo_octeto}"
-      vlan             = ct.vlan
-      vmid             = proxmox_lxc.cts[name].vmid
-      node             = proxmox_lxc.cts[name].target_node
-      apps_deployed    = try(length(ct.apps) > 0, false)
-      backup_restored  = try(null_resource.restore_restic[name].id != null, false)
-      docker_installed = try(null_resource.setup_docker[name].id != null, false)
-    }
+      hostname        = ct.hostname
+      ip              = "192.168.${ct.vlan}.${ct.ultimo_octeto}"
+      vlan            = ct.vlan
+      vmid            = proxmox_lxc.cts[name].vmid
+      node            = proxmox_lxc.cts[name].target_node
+      apps_deployed   = try(length(ct.apps) > 0, false)
+      backup_restored = try(null_resource.restore_restic[name].id != null, false)
+    docker_tls_configured = try(null_resource.setup_docker_tls_api[name].id != null, false) }
   }
 }
 

@@ -5,11 +5,14 @@
 ###############################################################################
 
 locals {
+  # Só CTs enabled + com rundeck permitido (default: true se não existir controlo_manual)
   enabled_cts_rundeck = {
     for name, ct in local.cts : name => ct
-    if try(ct.enabled, true)
+    if try(ct.enabled, true) && try(ct.controlo_manual.run_rundeck, true)
   }
 }
+
+
 
 resource "null_resource" "run_rundeck_job_per_ct" {
   for_each = local.enabled_cts_rundeck
@@ -23,7 +26,7 @@ resource "null_resource" "run_rundeck_job_per_ct" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-lc"]
-    command = <<-EOT
+    command     = <<-EOT
       set -euo pipefail
 
       IP="192.168.${each.value.vlan}.${each.value.ultimo_octeto}"
@@ -57,10 +60,9 @@ resource "null_resource" "run_rundeck_job_per_ct" {
       fi
     EOT
 
-    on_failure = continue  # ✅ Garantir que não bloqueia Terraform
+    on_failure = continue # ✅ Garantir que não bloqueia Terraform
   }
 
   depends_on = [
-    null_resource.deploy_apps
-  ]
+  null_resource.setup_docker_tls_api]
 }

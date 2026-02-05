@@ -3,8 +3,17 @@
 # Executa DEPOIS da criação do CT e ANTES do deploy das apps
 ###############################################################################
 
+locals {
+  # Só CTs enabled + com restore permitido (default: true se não existir controlo_manual)
+  enabled_cts_restore_restic = {
+    for name, ct in local.enabled_cts : name => ct
+    if try(ct.controlo_manual.run_restic_restore, true)
+  }
+}
+
+
 resource "null_resource" "restore_restic" {
-  for_each = local.enabled_cts
+  for_each = local.enabled_cts_restore_restic
 
   triggers = {
     vmid        = tonumber("${each.value.vlan}${each.value.ultimo_octeto}")

@@ -22,3 +22,5 @@ variable "rundeck_job_id" {
   type        = string
   description = "ID do job Rundeck a executar após criação do CT"
 }
+
+

@@ -109,3 +109,8 @@ desktop.ini
 Icon?
 .Spotlight-V100
 .Trashes
+
+# -----------------------
+# Certs
+# -----------------------
+*.pem

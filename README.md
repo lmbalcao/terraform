@@ -1,7 +1,7 @@
 Terraform + Proxmox + Rundeck
 
 fluxo:
-terraform apply -> add/remove no proxmox -> job rundeck
+terraform apply -> T/F add/remove no proxmox -> instala base -> prepara docker -> liga ao portainer instala -> T/F stack do forgejo -> T/F corre job rundeck
 
 1. tenho o inventory.tf onde defino requisitos individuais para cada ct
           enabled      = true / false
