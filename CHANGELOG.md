@@ -1,4 +1,11 @@
 
+## [v2.0.0] - 2026-02-14
+
+- update: teste global update
+- feat: teste global feat
+- fix: teste global fix
+
+
 ## [v1.0.1] - 2026-02-14
 
 - chore: apply repository template (forgejo actions + standards)
