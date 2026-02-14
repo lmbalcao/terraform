@@ -1,3 +1,32 @@
+
+## [v1.0.1] - 2026-02-14
+
+- chore: apply repository template (forgejo actions + standards)
+- chore: apply repository template (forgejo actions + standards)
+- 
+- upd
+- teste  push
+- Updates vários
+- upd
+- Otimização + Separação de dados
+- Terraform já instala apps com compose
+- upd
+- +
+- +
+- +
+- notas
+- + Integração base com Rundeck
+- upd
+- chore: remover ficheiros ignorados do repositório
+- Eliminar terraform.tfstate.backup
+- upd
+- upd
+- uod
+- upd
+- +upd
+- a
+- teste
+
 # Changelog
 
 Todas as alterações relevantes a este projeto serão documentadas aqui.
