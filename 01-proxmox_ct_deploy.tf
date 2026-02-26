@@ -21,9 +21,6 @@ resource "proxmox_lxc" "cts" {
 
   features {
     nesting = try(each.value.features.nesting, true)
-    fuse    = try(each.value.features.fuse, false)
-    keyctl  = try(each.value.features.keyctl, false)
-    mount   = try(each.value.features.mount, "")
   }
 
   ssh_public_keys = join("\n", var.ssh_public_keys)
@@ -52,7 +49,6 @@ resource "proxmox_lxc" "cts" {
   lifecycle {
     ignore_changes = [
       password,
-      features,
       # IMPORTANTE: como o mp0 vai ser criado fora do Terraform
       mountpoint,
     ]

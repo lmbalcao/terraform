@@ -1,7 +1,7 @@
 ###############################################################################
 # 05-post_proxmox_deploy.tf (CORRIGIDO COMPLETO)
-# - Mantém o apply_manual_features (sed)
-# - Aplica bind mounts via pct set (sem escapes problemáticos)
+# - Aplica features manuais via pct set -features
+# - Aplica bind mounts via pct set
 ###############################################################################
 
 locals {
@@ -12,9 +12,6 @@ locals {
         target_node = ct.target_node
       },
       {
-        # Features do provider (nesting aplicado pelo Terraform)
-        provider_features = try(ct.features.nesting, false) ? "nesting=1" : "nesting=0"
-
         # Features manuais adicionais
         manual_features = join(",", compact([
           try(ct.features_manual.fuse, false) ? "fuse=1" : "",
@@ -55,7 +52,7 @@ locals {
 }
 
 ###############################################################################
-# Aplica features_manual via sed no ficheiro de configuração do CT
+# Aplica features_manual via pct set -features no node alvo
 ###############################################################################
 
 resource "null_resource" "apply_manual_features" {
@@ -64,7 +61,7 @@ resource "null_resource" "apply_manual_features" {
   provisioner "local-exec" {
     command = <<-EOT
       ssh root@${var.proxmox_nodes[each.value.target_node]} \
-        "sed -i 's/^features:.*/features: ${each.value.features_str}/' /etc/pve/lxc/${each.value.vmid}.conf"
+        "pct set ${proxmox_lxc.cts[each.key].vmid} -features '${each.value.features_str}'"
     EOT
   }
 
@@ -84,12 +81,12 @@ resource "null_resource" "apply_pct_mounts" {
       ${join(" ; ", [
     for m in each.value.pct_mounts :
     (try(m.read_only, false)
-      ? format("pct set %d -%s %s,mp=%s,backup=%d,ro=1", each.value.vmid, m.slot, m.host_path, m.guest_path, m.backup ? 1 : 0)
-      : format("pct set %d -%s %s,mp=%s,backup=%d", each.value.vmid, m.slot, m.host_path, m.guest_path, m.backup ? 1 : 0)
+      ? format("pct set %d -%s %q,mp=%q,backup=%d,ro=1", proxmox_lxc.cts[each.key].vmid, m.slot, m.host_path, m.guest_path, m.backup ? 1 : 0)
+      : format("pct set %d -%s %q,mp=%q,backup=%d", proxmox_lxc.cts[each.key].vmid, m.slot, m.host_path, m.guest_path, m.backup ? 1 : 0)
     )
 ])}'
     EOT
-}
+  }
 
-depends_on = [proxmox_lxc.cts]
+  depends_on = [proxmox_lxc.cts]
 }
