@@ -1,4 +1,9 @@
 
+## [v2.0.2] - 2026-03-05
+
+- update README.md
+
+
 ## [v2.0.1] - 2026-02-26
 
 - refactor: update feature application method and clean up unused code
