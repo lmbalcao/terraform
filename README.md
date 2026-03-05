@@ -1,85 +1,138 @@
-# Terraform + Proxmox + Docker + Portainer + Rundeck  
-## Arquitetura, Fluxo e Estado do Projeto
+# Terraform Proxmox Platform
+
+Repositorio Terraform para provisao de infraestrutura com Proxmox e componentes de operacao (Docker, Portainer, Rundeck, backup).
+
+> Estado do projeto: ativo.
+> Modelo declarativo orientado por ficheiros `*.tf` no root.
 
 ---
 
-## Visão geral
+## Ambiente suportado
 
-Este projeto usa **Terraform como orquestrador de infraestrutura** sobre **Proxmox**, e **Rundeck** como motor de **configuração contínua e execução operacional**.
+Previsto para:
 
-O objetivo é que **editar um único ficheiro (`inventory.tf`)** seja suficiente para:
-- criar / destruir contentores (CT) e VMs
-- preparar o sistema base
-- instalar Docker
-- integrar Portainer
-- aplicar stacks (ex.: Forgejo)
-- executar jobs Rundeck conforme necessário
+* Terraform CLI
+* Proxmox provider
+* Linux/macOS para execucao de `terraform`
 
 ---
 
-## Fluxo global
+## Requisitos
 
-### Princípio fundamental
-- **Terraform** decide *o quê* existe (estado desejado)
-- **Rundeck** decide *como* os sistemas são configurados e mantidos
+### Terraform
+
+* `terraform init`
+* providers definidos em `providers.tf`
+
+### Variaveis/credenciais
+
+* ficheiros `vars-*.tf`
+* credenciais via `*.tfvars`/env vars
 
 ---
 
-## Fonte da verdade
+## Seguranca
 
-### 1) inventory.tf
+* Nao versionar segredos em claro.
+* Usar backend/state com controlo de acesso.
+* Rever plano (`terraform plan`) antes de `apply`.
 
-Ficheiro **central e único** que defines no dia-a-dia.
+---
 
-Define, por CT:
+## Instalacao
 
-- `enabled = true | false`
-  - `true` → criar/manter
-    - `false` → destruir
-    - recursos (CPU, RAM, disco)
-    - rede (VLAN, IP)
-    - flags funcionais:
-      - docker
-        - backup
-          - portainer
-            - rundeck
-            - tags (já implementadas)
-            - extensões futuras:
-              - HA
-                - afinidades
-                  - políticas
+### 1) Clonar repositorio
 
-                  👉 **Editar este ficheiro e aplicar é o workflow normal.**
+```bash
+git clone https://forgejo.lbtec.org/lmbalcao/terraform.git
+cd terraform
+```
 
-                  ---
+---
 
-                  ### 2) credentials.auto.tfvars
+### 2) Inicializar
 
-                  Contém **variáveis globais do sistema**:
+```bash
+terraform init
+```
 
-                  - credenciais Proxmox
-                  - utilizador SSH e chave default
-                  - paths de backup
-                  - tokens Portainer / Rundeck / Forgejo
-                  - repositórios (ex.: Restic)
+---
 
-                  Características:
-                  - não contém lógica
-                  - não contém inventário
-                  - pode ser substituído por `TF_VAR_*` em CI
-                  - não deve ser versionado
+### 3) Plan/apply
 
-                  ---
+```bash
+terraform plan
+terraform apply
+```
 
-                  ### 3) Ficheiros Terraform (`*.tf`)
+---
 
-                  - Leem `inventory.tf` + `credentials.auto.tfvars`
-                  - Criam/destruem recursos conforme `enabled`
-                  - Aplicam opções comuns e específicas
-                  - Executam scripts via `null_resource` quando necessário
+## Configuracao
 
-                  ---
+Ficheiros principais:
 
-                  ## Estrutura Terraform (00 → 99)
+* `00-inventory.tf`
+* `00-validations.tf`
+* `01-proxmox_ct_deploy.tf`
+* `02-proxmox_vm_deploy.tf`
+* `05-post_proxmox_deploy.tf`
+* `10-restic_deploy.tf`
+* `15-docker_setup.tf`
+* `20-docker_deploy.tf`
+* `30-portainer_endpoints.tf`
+* `50-rundeck_deploy.tf`
 
-                  
+---
+
+## Servicos
+
+| Bloco | Funcao |
+| ----- | ------ |
+| CT deploy | ciclo de vida de containers Proxmox |
+| VM deploy | ciclo de vida de VMs Proxmox |
+| post-provision | configuracao posterior ao deploy |
+| docker setup/deploy | runtime docker e stacks |
+| portainer/rundeck | integracao operacional |
+| restic | base de backups |
+
+---
+
+## Persistencia
+
+Estado Terraform depende do backend configurado (local/remoto).
+
+Artefactos versionados:
+
+* ficheiros `*.tf`
+* lockfile `.terraform.lock.hcl`
+
+---
+
+## Arquitetura
+
+```mermaid
+flowchart TD
+    Vars[vars e inventory] --> TF[Terraform graph]
+    TF --> Proxmox[CT/VM resources]
+    TF --> Docker[Docker setup]
+    TF --> Ops[Portainer/Rundeck/Restic]
+```
+
+---
+
+## Troubleshooting
+
+### Provider/autenticacao falha
+
+Validar credenciais e `providers.tf`.
+
+### Plano inesperado
+
+Rever diff do `terraform plan` e input vars antes de aplicar.
+
+---
+
+## Notas
+
+* Repositorio orientado a IaC declarativa no root.
+* Alguns ficheiros legacy/teste podem coexistir e devem ser revistos antes de producao.
