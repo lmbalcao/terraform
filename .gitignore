@@ -114,3 +114,17 @@ Icon?
 # Certs
 # -----------------------
 *.pem
+# ==================================================
+# Claude / Codex runtime local
+# ==================================================
+.claude/settings.local.json
+.claude/settings.local.legacy.json
+.claude/cache/manifest.json
+.claude/cache/security/*
+!.claude/cache/security/.gitkeep
+.claude/artifacts/*
+!.claude/artifacts/.gitkeep
+.codex/artifacts/*
+!.codex/artifacts/.gitkeep
+.codex/cache/*
+!.codex/cache/.gitkeep
