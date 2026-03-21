@@ -86,7 +86,7 @@ resource "null_resource" "apply_pct_mounts" {
     )
 ])}'
     EOT
-  }
+}
 
-  depends_on = [proxmox_lxc.cts]
+depends_on = [proxmox_lxc.cts]
 }

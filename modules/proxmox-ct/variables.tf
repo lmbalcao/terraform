@@ -19,6 +19,13 @@ variable "tags" {
   description = "Workload tags."
 }
 
+variable "description" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional CT description written to Proxmox notes."
+}
+
 variable "ostemplate" {
   type        = string
   description = "Resolved LXC template path."

@@ -41,10 +41,17 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Check Terraform formatting
-        run: terraform fmt -check -recursive
+      - name: Check Terraform formatting for active stacks
+        run: |
+          terraform fmt -check -recursive modules
+          terraform fmt -check -recursive stacks
 
       - name: Validate proxmox-base stack
         run: |
           terraform -chdir=stacks/proxmox-base init -backend=false
           terraform -chdir=stacks/proxmox-base validate
+
+      - name: Validate openwrt-dns stack
+        run: |
+          terraform -chdir=stacks/openwrt-dns init -backend=false
+          terraform -chdir=stacks/openwrt-dns validate

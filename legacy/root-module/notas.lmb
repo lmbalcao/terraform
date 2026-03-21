@@ -1,0 +1,122 @@
+ct:
+  enabled: sn
+  hostname: nome
+  target_node: nome
+  vlan: numero
+  tags: varias
+
+  network:
+    dhcp: sn (se nao, ip fixo)
+    dns_server: ip_ou_lista_ips
+    dns_domain: dominio
+
+  access: adiciona informacao as notas do ct de forma a ter uri e porta. exemplo:
+
+"traefik-int.enable=true
+
+traefik-int.http.routers.ntopng.rule=Host(`ntopng.lbtec.org`)
+
+traefik-int.http.routers.ntopng.entrypoints=websecure
+
+traefik-int.http.routers.ntopng.tls=true
+
+traefik-int.http.routers.ntopng.tls.certresolver=le
+
+traefik-int.http.routers.ntopng.middlewares=compression@file
+
+traefik-int.http.routers.ntopng.service=ntopng-svc
+
+traefik-int.http.services.ntopng-svc.loadbalancer.server.port=3000
+
+traefik-int.http.routers.netflow.rule=Host(`netflow.lbtec.org`)
+
+traefik-int.http.routers.netflow.entrypoints=websecure
+
+traefik-int.http.routers.netflow.tls=true
+
+traefik-int.http.routers.netflow.tls.certresolver=le
+
+traefik-int.http.routers.netflow.middlewares=compression@file
+
+traefik-int.http.routers.netflow.service=netflow-svc
+
+traefik-int.http.services.netflow-svc.loadbalancer.server.port=8080
+"
+
+
+
+    uri: uri
+    porta: numero
+
+  traefik:
+    instance: nome (instancia traefik a usar no codigo traefik-int.
+
+  system:
+    ostemplate: caminho
+    unprivileged: sn
+
+  resources:
+    cores: numero
+    memory: numero
+    swap: numero
+
+  boot:
+    onboot: sn
+    start: sn
+
+  storage:
+    storage: nome
+    size: numero
+
+  features:
+    nesting: sn
+
+  features_manual: # alterados depois com comando pct
+    keyctl: sn
+    fuse: sn
+
+  extras:
+    apps: aplicacoes_instaladas
+    mountpoints: mpx
+
+vm:
+  enabled: sn
+  name: nome
+  target_node: nome
+  vlan: numero
+  tags: varias
+
+  network:
+    dns_server: ip_ou_lista_ips
+    dns_domain: dominio
+
+  access:
+    uri: uri
+    porta: numero
+
+  traefik:
+    instance: nome
+
+  resources:
+    cores: numero
+    sockets: numero
+    memory: numero
+
+  boot:
+    start_at_node_boot: sn
+    vm_state: nome
+
+  storage:
+    storage: nome
+    size: numero
+
+  template:
+    ostemplate: caminho
+    clone: nome
+
+  features_manual:
+    keyctl: sn
+    fuse: sn
+
+  control:
+    controlo_manual: sn

@@ -8,6 +8,7 @@ Responsabilidades:
 - validar schema, referencias de node e rede, e unicidade de `vmid`
 - criar CTs e VMs no Proxmox
 - publicar outputs estaveis consumiveis por stacks externos
+- escrever notas Proxmox derivadas de `services[*].traefik_*` para workloads expostos via Traefik
 
 Nao faz:
 
@@ -18,6 +19,23 @@ Nao faz:
 - triggers Rundeck
 - restores Restic
 - configuracao pos-provisionamento detalhada
+- criar registos DNS no OpenWrt
+
+## `stacks/openwrt-dns`
+
+Responsabilidades:
+
+- consumir `ingress.yaml` e os workloads publicados no inventario
+- resolver `uri -> traefik_tag -> address`
+- garantir no OpenWrt os hostnames que apontam para a instancia Traefik correta
+- falhar cedo se um `uri` referenciar uma instancia inexistente ou se o mesmo `uri` apontar para tags diferentes
+
+Nao faz:
+
+- criar CTs ou VMs
+- gerar labels Traefik
+- inferir IPs de entrada sem `ingress.yaml`
+- esconder alteracoes DNS dentro do stack base
 
 ## `stacks/ansible`
 
@@ -57,4 +75,6 @@ Nao faz:
 - `pbs_targets`
 - `inventory_summary`
 
-`ansible` e `pbs` devem consumir esses contratos sem depender do layout interno do stack base.
+`openwrt-dns` consome apenas inventario e `ingress.yaml`; nao deve depender da estrutura interna do stack base para resolver hostnames.
+
+`ansible` e `pbs` devem consumir os contratos do core sem depender do layout interno do stack base.

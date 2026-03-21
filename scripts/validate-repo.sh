@@ -26,11 +26,20 @@ required_files=(
   docs/stack-boundaries.md
   docs/architecture-decisions/0001-inventory-and-state.md
   schemas/inventory-environment.schema.json
+  inventory/lab/ingress.yaml
   scripts/update-changelog.py
   scripts/validate-inventory.py
   scripts/validate-inventory.sh
   scripts/plan-stack.sh
   scripts/cutover-lab.sh
+  stacks/openwrt-dns/versions.tf
+  stacks/openwrt-dns/providers.tf
+  stacks/openwrt-dns/variables.tf
+  stacks/openwrt-dns/locals.tf
+  stacks/openwrt-dns/main.tf
+  stacks/openwrt-dns/outputs.tf
+  env/lab/openwrt-dns.tfvars.example
+  legacy/root-module/README.md
 )
 
 for path in "${required_files[@]}"; do
@@ -46,6 +55,7 @@ required_dirs=(
   stacks
   env
   docs
+  legacy
 )
 
 for path in "${required_dirs[@]}"; do
@@ -54,6 +64,20 @@ for path in "${required_dirs[@]}"; do
     exit 1
   fi
 done
+
+mapfile -t root_tf_files < <(find . -maxdepth 1 -type f -name "*.tf" | sort)
+if (( ${#root_tf_files[@]} > 0 )); then
+  printf "Root Terraform files must not exist outside legacy/:
+" >&2
+  printf "  %s
+" "${root_tf_files[@]}" >&2
+  exit 1
+fi
+
+if [[ -f .terraform.lock.hcl ]]; then
+  echo "Root .terraform.lock.hcl must not exist outside legacy/" >&2
+  exit 1
+fi
 
 if [[ -f .forgejo/workflows/release.yml && ! -f VERSION ]]; then
   echo "Missing VERSION for release-enabled repository" >&2

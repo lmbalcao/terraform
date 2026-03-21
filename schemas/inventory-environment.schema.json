@@ -8,6 +8,7 @@
     "defaults",
     "nodes",
     "networks",
+    "ingress",
     "cts",
     "vms"
   ],
@@ -28,6 +29,12 @@
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/network_catalog_entry"
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ingress_catalog_entry"
       }
     },
     "cts": {
@@ -86,6 +93,19 @@
       },
       "additionalProperties": true
     },
+    "ingress_catalog_entry": {
+      "type": "object",
+      "required": [
+        "address"
+      ],
+      "properties": {
+        "address": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
     "common_workload": {
       "type": "object",
       "required": [
@@ -118,6 +138,10 @@
           "minLength": 1
         },
         "hostname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes_title": {
           "type": "string",
           "minLength": 1
         },
@@ -258,6 +282,18 @@
           "maximum": 65535
         },
         "scheme": {
+          "type": "string",
+          "minLength": 1
+        },
+        "traefik_tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "traefik_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uri": {
           "type": "string",
           "minLength": 1
         },

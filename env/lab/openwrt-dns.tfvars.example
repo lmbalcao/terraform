@@ -1,0 +1,8 @@
+# Copy to env/lab/openwrt-dns.tfvars and fill with real values.
+environment = "lab"
+inventory_root = "../../inventory"
+openwrt_hostname = "192.168.40.1"
+openwrt_port = 80
+openwrt_scheme = "http"
+openwrt_username = "root"
+openwrt_password = "REPLACE_ME"

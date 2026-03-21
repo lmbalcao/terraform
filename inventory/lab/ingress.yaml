@@ -1,0 +1,6 @@
+version: 1
+traefik_instances: {}
+# Example:
+# traefik_instances:
+#   traefik-int:
+#     address: 192.168.40.50

@@ -6,6 +6,7 @@ Cada ambiente vive em `inventory/<environment>/` e separa:
 - `defaults.yaml`: defaults por tipo
 - `nodes.yaml`: catalogo de nodes Proxmox validos
 - `networks.yaml`: segmentos logicos reutilizaveis
+- `ingress.yaml`: catalogo de instancias Traefik e respetivos IPs de entrada
 - `cts/*.yaml`: um documento por CT
 - `vms/*.yaml`: um documento por VM
 
@@ -20,6 +21,7 @@ Cada ambiente vive em `inventory/<environment>/` e separa:
 - `network.mode` e sempre explicito: `static` ou `dhcp`
 - `services` descreve intencao de exposicao, nao labels raw de reverse proxy
 - `operations` e sempre opt-in; nao existem defaults implicitos que disparem efeitos laterais
+- quando um servico declara `traefik_tag`, `traefik_label` e `uri`, o hostname tem de ser resolvivel no OpenWrt para o IP da instancia Traefik referenciada
 
 ## Estrutura Agregada
 
@@ -28,6 +30,7 @@ version: 1
 defaults: {}
 nodes: {}
 networks: {}
+ingress: {}
 cts: {}
 vms: {}
 ```
@@ -94,6 +97,21 @@ networks:
     dns_domain: lbtec.org
 ```
 
+## ingress.yaml
+
+```yaml
+version: 1
+traefik_instances:
+  traefik-int:
+    address: 192.168.40.50
+```
+
+Regras:
+
+- `traefik_instances.<tag>.address` e o IP para o qual o OpenWrt deve resolver os hostnames publicados por essa instancia
+- um mesmo `uri` nao pode apontar para duas instancias Traefik diferentes
+- `ingress.yaml` e o catalogo de entrada; o workload apenas referencia `traefik_tag`
+
 ## Campos Comuns
 
 Todos os workloads usam os seguintes campos:
@@ -104,6 +122,7 @@ Todos os workloads usam os seguintes campos:
 - `vmid`
 - `name`
 - `node`
+- `notes_title`
 - `tags`
 - `network`
 - `resources`
@@ -186,21 +205,39 @@ storage:
 
 ### services
 
-`services` descreve metadados consumiveis por stacks externos:
+`services` descreve metadados consumiveis por stacks externos. Um workload pode expor varios endpoints; cada entrada representa uma porta/hostname publicado.
+
+Quando `traefik_tag`, `traefik_label` e `uri` existem, o fluxo faz duas coisas:
+
+- `stacks/proxmox-base` gera automaticamente notas Proxmox no formato esperado pela instancia Traefik referenciada
+- `stacks/openwrt-dns` garante no OpenWrt que o `uri` resolve para o IP definido em `ingress.yaml` para esse `traefik_tag`
 
 ```yaml
 services:
   - name: homarr
     port: 7575
     scheme: http
+    traefik_tag: traefik-int
+    traefik_label: homarr
+    uri: homarr.lbtec.org
     proxy:
       enabled: true
       host: homarr.lbtec.org
       entrypoint: websecure
       tls: true
+  - name: homarr-api
+    port: 8080
+    scheme: http
+    traefik_tag: traefik-int
+    traefik_label: homarr-api
+    uri: homarr-api.lbtec.org
 ```
 
-Se o detalhe nao existir hoje, o campo deve ficar vazio e nao ser inventado.
+Regras:
+
+- `traefik_tag`, `traefik_label` e `uri` sao obrigatorios em conjunto
+- `traefik_tag` tem de existir em `ingress.yaml`
+- um mesmo `uri` nao pode ser usado por tags Traefik diferentes
 
 ### operations
 
@@ -209,6 +246,88 @@ operations:
   ansible_enabled: false
   backup_policy: null
   bootstrap_profile: null
+```
+
+Exemplo com notas Traefik geradas:
+
+```yaml
+version: 1
+kind: ct
+enabled: true
+vmid: 6020
+name: pbs
+hostname: pbs
+notes_title: Proxmox Backup Server
+node: 2core
+tags:
+  - 60-servicos-externos
+network:
+  segment: servicos-externos
+  mode: static
+  address: 192.168.60.20/24
+  gateway: 192.168.60.1
+resources:
+  cpu_cores: 2
+  memory_mb: 4096
+  swap_mb: 1024
+boot:
+  on_boot: true
+  start: true
+storage:
+  rootfs_storage: local
+  rootfs_size_gb: 8
+lxc:
+  template: local:vztmpl/debian-13-standard_amd64.tar.zst
+  unprivileged: true
+  features:
+    nesting: true
+  mounts: []
+services:
+  - name: pbs
+    scheme: https
+    port: 8007
+    traefik_tag: traefik-int
+    traefik_label: pbs
+    uri: pbs.lbtec.org
+operations:
+  ansible_enabled: false
+  backup_policy: null
+  bootstrap_profile: null
+```
+
+Com este `ingress.yaml`:
+
+```yaml
+version: 1
+traefik_instances:
+  traefik-int:
+    address: 192.168.40.50
+```
+
+Notas Proxmox geradas para esse CT:
+
+```text
+Proxmox Backup Server
+
+traefik-int.enable=true
+
+traefik-int.http.routers.pbs.rule=Host(`pbs.lbtec.org`)
+
+traefik-int.http.routers.pbs.entrypoints=websecure
+
+traefik-int.http.routers.pbs.middlewares=compression@file
+
+traefik-int.http.routers.pbs.tls=true
+
+traefik-int.http.routers.pbs.tls.certresolver=le
+
+traefik-int.http.services.pbs.loadbalancer.server.port=8007
+```
+
+Entrada DNS que o `openwrt-dns` deve garantir:
+
+```text
+pbs.lbtec.org -> 192.168.40.50
 ```
 
 `operations` nao substitui Terraform state nem serve para disparar `remote-exec` arbitrario.
@@ -325,4 +444,7 @@ operations:
 - `network.segment` valido
 - `address` e `gateway` obrigatorios em `static`
 - `kind` coerente com a diretoria `cts` ou `vms`
+- `traefik_tag`, `traefik_label` e `uri` coerentes entre si
+- `traefik_tag` existente em `ingress.yaml`
+- `uri` nao conflituoso entre instancias Traefik
 - campos desconhecidos devem ser revistos antes de entrarem no schema operativo

@@ -2,6 +2,7 @@ resource "proxmox_lxc" "this" {
   target_node = var.target_node
   hostname    = var.hostname
   tags        = length(var.tags) > 0 ? join(";", var.tags) : null
+  description = var.description
   ostemplate  = var.ostemplate
 
   unprivileged = var.unprivileged

@@ -57,6 +57,7 @@ module "cts" {
   hostname      = try(each.value.hostname, each.value.name)
   vmid          = each.value.vmid
   tags          = try(each.value.tags, [])
+  description   = try(local.ct_descriptions[each.key], null)
   ostemplate    = try(each.value.lxc.template, var.default_lxc_template)
   root_password = var.root_password
   unprivileged  = try(each.value.lxc.unprivileged, true)
@@ -99,8 +100,8 @@ module "vms" {
   start_at_node_boot = each.value.boot.on_boot
   vm_state           = each.value.boot.start_state
 
-  network_bridge = each.value.network.bridge
-  network_tag    = each.value.network.vlan
+  network_bridge  = each.value.network.bridge
+  network_tag     = each.value.network.vlan
   network_address = try(each.value.network.address, null)
 
   rootfs_storage = each.value.storage.rootfs_storage

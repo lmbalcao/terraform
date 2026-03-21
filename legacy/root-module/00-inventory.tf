@@ -47,56 +47,6 @@ locals {
       mountpoints = []
     }
 
-    paperless = {
-      enabled       = true
-      vlan          = 60
-      ultimo_octeto = 6
-      target_node   = "4core"
-      hostname      = "paperless"
-      tags          = []
-      ostemplate    = var.ostemplate
-      unprivileged  = true
-
-      cores  = 2
-      memory = 2048
-      swap   = 1024
-
-      onboot = true
-      start  = true
-
-      storage = "local"
-      size    = "8G"
-
-      features = {
-        nesting = true
-      }
-
-      features_manual = {
-        keyctl = false
-        fuse   = false
-        mount  = ""
-        create = false
-      }
-
-      controlo_manual = {
-        run_restic_restore = false
-        run_rundeck        = false
-      }
-
-      apps = ["paperless"]
-
-      pct_mounts = [
-        {
-          slot       = "mp0"
-          host_path  = "/mnt/data/paperless"
-          guest_path = "/mnt/data"
-          backup     = false
-          read_only  = false
-        }
-      ]
-    }
-  }
-
   vms = {
     vm_template = {
       enabled       = false

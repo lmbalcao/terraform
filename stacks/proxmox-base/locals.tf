@@ -133,4 +133,41 @@ locals {
     for name, vm in local.vms : name
     if vm.network.mode == "static" && (try(vm.network.address, null) == null || try(vm.network.gateway, null) == null)
   ]
+
+  ct_traefik_services = {
+    for name, ct in local.cts : name => [
+      for service in try(ct.services, []) : {
+        traefik_tag   = try(service.traefik_tag, null)
+        traefik_label = try(service.traefik_label, null)
+        uri           = try(service.uri, null)
+        port          = try(service.port, null)
+      }
+      if try(service.traefik_tag, null) != null && try(service.traefik_label, null) != null && try(service.uri, null) != null && try(service.port, null) != null
+    ]
+  }
+
+  ct_description_tags = {
+    for name, services in local.ct_traefik_services : name => distinct([for service in services : service.traefik_tag])
+  }
+
+  ct_descriptions = {
+    for name, ct in local.cts : name => (
+      length(local.ct_traefik_services[name]) == 0
+      ? null
+      : join("\n\n", concat(
+        [try(ct.notes_title, ct.hostname, ct.name)],
+        [for tag in local.ct_description_tags[name] : format("%s.enable=true", tag)],
+        flatten([
+          for service in local.ct_traefik_services[name] : [
+            format("%s.http.routers.%s.rule=Host(`%s`)", service.traefik_tag, service.traefik_label, service.uri),
+            format("%s.http.routers.%s.entrypoints=websecure", service.traefik_tag, service.traefik_label),
+            format("%s.http.routers.%s.middlewares=compression@file", service.traefik_tag, service.traefik_label),
+            format("%s.http.routers.%s.tls=true", service.traefik_tag, service.traefik_label),
+            format("%s.http.routers.%s.tls.certresolver=le", service.traefik_tag, service.traefik_label),
+            format("%s.http.services.%s.loadbalancer.server.port=%s", service.traefik_tag, service.traefik_label, service.port),
+          ]
+        ])
+      ))
+    )
+  }
 }
