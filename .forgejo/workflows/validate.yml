@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  baseline:
     runs-on: docker
 
     steps:
@@ -20,3 +20,31 @@ jobs:
 
       - name: Validate repository baseline
         run: bash scripts/validate-repo.sh
+
+  inventory:
+    runs-on: docker
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate YAML inventory
+        run: bash scripts/validate-inventory.sh
+
+  terraform-config:
+    runs-on: docker
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+
+      - name: Validate proxmox-base stack
+        run: |
+          terraform -chdir=stacks/proxmox-base init -backend=false
+          terraform -chdir=stacks/proxmox-base validate

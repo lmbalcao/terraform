@@ -1,0 +1,34 @@
+version: 1
+kind: ct
+enabled: true
+vmid: 6011
+name: homarr
+hostname: homarr
+node: 2core
+tags:
+  - 60-servicos-externos
+network:
+  segment: servicos-externos
+  mode: static
+  address: 192.168.60.11/24
+  gateway: 192.168.60.1
+resources:
+  cpu_cores: 2
+  memory_mb: 2048
+  swap_mb: 1024
+boot:
+  on_boot: true
+  start: true
+storage:
+  rootfs_storage: local
+  rootfs_size_gb: 8
+lxc:
+  unprivileged: true
+  features:
+    nesting: true
+  mounts: []
+services: []
+operations:
+  ansible_enabled: false
+  backup_policy: null
+  bootstrap_profile: null

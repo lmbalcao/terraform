@@ -1,0 +1,31 @@
+version: 1
+defaults:
+  common:
+    tags: []
+    services: []
+    operations:
+      ansible_enabled: false
+      backup_policy: null
+      bootstrap_profile: null
+  ct:
+    enabled: true
+    boot:
+      on_boot: true
+      start: true
+    resources:
+      swap_mb: 1024
+    lxc:
+      unprivileged: true
+      features:
+        nesting: true
+      mounts: []
+  vm:
+    enabled: true
+    boot:
+      on_boot: true
+      start_state: running
+    qemu:
+      sockets: 1
+      agent_enabled: false
+      source: {}
+      disks: []

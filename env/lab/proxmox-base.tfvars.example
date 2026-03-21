@@ -1,0 +1,9 @@
+# Copy to env/lab/proxmox-base.tfvars and fill with real values.
+proxmox_api_url = "https://proxmox.example.invalid:8006/api2/json"
+proxmox_api_token_id = "terraform@pve!lab"
+proxmox_api_token = "REPLACE_ME"
+root_password = "REPLACE_ME"
+
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... replace-me",
+]

@@ -1,0 +1,18 @@
+version: 1
+networks:
+  servicos-externos:
+    vlan: 60
+    bridge: vmbr0
+    cidr: 192.168.60.0/24
+    gateway: 192.168.60.1
+    dns_servers:
+      - 192.168.60.1
+    dns_domain: lbtec.org
+  vlan-17:
+    vlan: 17
+    bridge: vmbr0
+    cidr: 192.168.17.0/24
+    gateway: 192.168.17.1
+    dns_servers:
+      - 192.168.17.1
+    dns_domain: lbtec.org

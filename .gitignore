@@ -65,6 +65,7 @@ age.txt
 
 # Diretório local do Terraform
 .terraform/
+.tools/
 
 # Estado (NUNCA versionar)
 terraform.tfstate

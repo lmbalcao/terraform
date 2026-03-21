@@ -1,0 +1,6 @@
+environment = "lab"
+inventory_root = "../../inventory"
+default_search_domain = "lbtec.org"
+default_lxc_template = "local:vztmpl/debian-13-standard_amd64.tar.zst"
+network_bridge = "vmbr0"
+ssh_public_keys = []

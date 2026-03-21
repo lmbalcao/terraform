@@ -1,0 +1,388 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lbtec.org/schemas/terraform/inventory-environment.schema.json",
+  "title": "Terraform inventory environment",
+  "type": "object",
+  "required": [
+    "version",
+    "defaults",
+    "nodes",
+    "networks",
+    "cts",
+    "vms"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "defaults": {
+      "type": "object"
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "networks": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/network_catalog_entry"
+      }
+    },
+    "cts": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ct_workload"
+      }
+    },
+    "vms": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/vm_workload"
+      }
+    }
+  },
+  "$defs": {
+    "network_catalog_entry": {
+      "type": "object",
+      "required": [
+        "vlan",
+        "bridge",
+        "cidr",
+        "gateway",
+        "dns_servers",
+        "dns_domain"
+      ],
+      "properties": {
+        "vlan": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4094
+        },
+        "bridge": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cidr": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gateway": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dns_servers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "dns_domain": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "common_workload": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "enabled",
+        "vmid",
+        "name",
+        "node",
+        "network",
+        "resources",
+        "boot",
+        "storage",
+        "services",
+        "operations"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "vmid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hostname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "node": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "network": {
+          "$ref": "#/$defs/workload_network"
+        },
+        "resources": {
+          "$ref": "#/$defs/common_resources"
+        },
+        "boot": {
+          "type": "object"
+        },
+        "storage": {
+          "$ref": "#/$defs/workload_storage"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/service"
+          }
+        },
+        "operations": {
+          "$ref": "#/$defs/operations"
+        }
+      },
+      "additionalProperties": true
+    },
+    "workload_network": {
+      "type": "object",
+      "required": [
+        "segment",
+        "mode"
+      ],
+      "properties": {
+        "segment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "static",
+            "dhcp"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gateway": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dns_servers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "dns_domain": {
+          "type": "string"
+        },
+        "bridge": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "common_resources": {
+      "type": "object",
+      "required": [
+        "cpu_cores",
+        "memory_mb"
+      ],
+      "properties": {
+        "cpu_cores": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cpu_sockets": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_mb": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "swap_mb": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "workload_storage": {
+      "type": "object",
+      "required": [
+        "rootfs_storage",
+        "rootfs_size_gb"
+      ],
+      "properties": {
+        "rootfs_storage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rootfs_size_gb": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "service": {
+      "type": "object",
+      "required": [
+        "name",
+        "port",
+        "scheme"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "scheme": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proxy": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "host": {
+              "type": "string"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "tls": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "operations": {
+      "type": "object",
+      "properties": {
+        "ansible_enabled": {
+          "type": "boolean"
+        },
+        "backup_policy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bootstrap_profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "ct_workload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common_workload"
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "lxc"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ct"
+            },
+            "lxc": {
+              "type": "object",
+              "properties": {
+                "template": {
+                  "type": "string"
+                },
+                "unprivileged": {
+                  "type": "boolean"
+                },
+                "features": {
+                  "type": "object"
+                },
+                "mounts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "vm_workload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common_workload"
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "qemu"
+          ],
+          "properties": {
+            "kind": {
+              "const": "vm"
+            },
+            "qemu": {
+              "type": "object",
+              "properties": {
+                "sockets": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "agent_enabled": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "object"
+                },
+                "disks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}
