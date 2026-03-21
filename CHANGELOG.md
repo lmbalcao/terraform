@@ -58,7 +58,7 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.0.3] - 2026-03-19
+## [v2.0.4] - 2026-03-21
 
-- chore: apply template baseline
+- docs: add terraform refactoring analysis
 
