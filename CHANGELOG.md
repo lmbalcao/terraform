@@ -58,7 +58,7 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.0.5] - 2026-03-21
+## [v2.0.6] - 2026-03-21
 
-- Modificar analise-refatorizacao.md
+- docs: finalize refactoring analysis
 
