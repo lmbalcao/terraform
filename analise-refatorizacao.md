@@ -1,6 +1,6 @@
 # 1. Resumo Executivo
 
-O repo atual mistura três responsabilidades no mesmo root module: provisão Proxmox, configuração imperativa dentro dos guests e orquestração operacional de apps/serviços externos. A direção certa é separar isso em `stacks` independentes, com um núcleo `proxmox-base` orientado por inventário, e mover Portainer/PBS/Ansible para camadas opcionais. `notas.lmb` é uma boa semente de schema, mas ainda está demasiado ambíguo e inconsistente para ser a forma final.
+O repo atual mistura três responsabilidades no mesmo root module: provisão Proxmox, configuração imperativa dentro dos guests e orquestração operacional de apps/serviços externos. A direção certa é separar isso em `stacks` independentes, com um núcleo `proxmox-base` orientado por inventário, manter `Ansible` e `PBS` como componentes suportados da arquitetura e remover `Vault`, `Rundeck`, `Portainer` e `Restic` deste repositório. `notas.lmb` é uma boa semente de schema, mas ainda está demasiado ambíguo e inconsistente para ser a forma final.
 
 # 2. Leitura do Estado Atual do Repositório
 
@@ -44,12 +44,10 @@ inventory/
 modules/
   proxmox-ct/
   proxmox-vm/
-  portainer-endpoint/      # opcional
-  portainer-stack/         # opcional
 stacks/
   proxmox-base/
-  portainer/               # opcional
-  pbs/                     # opcional
+  ansible/
+  pbs/
 env/
   lab/*.tfvars
   staging/*.tfvars
@@ -59,36 +57,37 @@ docs/
 ```
 
 - Manter: metadata de repo, `scripts/validate-repo.sh`, `.forgejo/`, docs gerais.
-- Mover/fundir: root `providers.tf`, `vars-*.tf`, `01/02/05/...` para `stacks/` e `modules/`.
-- Remover: `modules.tf`, `templates/`, `10-validade_backup.tf`, `local.enabled_cts_docker`, `teste`.
+- Mover/fundir: root `providers.tf`, `vars-*.tf`, `01/02/05/...` para `stacks/` e `modules/`, preservando apenas o que serve `proxmox-base`, `ansible` e `pbs`.
+- Remover: `modules.tf`, `templates/`, `10-validade_backup.tf`, `10-restic_deploy.tf`, `15-docker_setup.tf`, `20-docker_deploy.tf`, `30-portainer_endpoints.tf`, `50-rundeck_deploy.tf`, `local.enabled_cts_docker`, `teste`.
 - Recriar de raiz: stack raiz Terraform, README técnico, validações, providers por stack, outputs, CI com `fmt`/`validate`.
 
 # 7. Avaliação das Apps
 
-- Ansible: faz sentido como integração opcional. Terraform não deve continuar a fazer bootstrap imperativo extensivo dentro dos guests; Ansible pode consumir inventário/outputs externos.
-- Vault: não deve existir como app gerida neste repo. É dependência externa de segredos, não base lógica de Proxmox/inventory. ESTE SAI
-- Rundeck: o valor aqui é fraco. O atual trigger é side-effectful, não participa no estado e ainda está semanticamente desalinhado com o provi. ESTE SAI
-- PBS: faz sentido técnico no ecossistema Proxmox, mas como stack separada e opcional, não no núcleo.I NESTE FALO EM INTEGRAS/AUTOMATIZAR/ADICIONARR CT A PLANO DE BACKUPS 
-- Portainer: pode continuar útil se a estratégia for “Docker standalone em CTs”, mas não deve contaminar o stack base.I ESTE SAI
-- Restic: o restore em `apply` é demasiado intrusivo para ser core. Se ficar, deve ser opcional e separado. ESTE SAI
+- Ansible: deve manter-se no repositório como camada suportada de configuração pós-provisionamento, mas desacoplada do stack base. O papel certo é consumir o inventário e outputs do Terraform, não substituir o Terraform nem repetir modelação de infraestrutura.
+- Vault: deve sair deste repositório. É uma dependência externa de gestão de segredos e não uma peça estrutural do inventário ou da provisão Proxmox.
+- Rundeck: deve sair deste repositório. O uso atual é um trigger lateral com `curl`, fora do modelo de estado do Terraform e sem justificação suficiente para continuar no desenho alvo.
+- PBS: deve manter-se no repositório como componente de infraestrutura. Faz sentido no ecossistema Proxmox e deve evoluir para integração explícita com políticas de backup, incluindo associação e automatização da inclusão de CTs e VMs em planos de backup.
+- Portainer: deve sair deste repositório. A sua existência empurra o desenho para gestão de apps Docker dentro do stack de infraestrutura e aumenta o acoplamento operacional sem ser parte da base pretendida.
+- Restic: deve sair deste repositório. O restore em `apply` é demasiado intrusivo, imperativo e frágil para continuar como parte da arquitetura alvo.
+
 # 8. Decisões de Manter / Opcional / Remover
 
-- Manter: provisão Proxmox, inventário, módulos CT/VM, metadados de networking lógico e de exposição de serviços.
-- Opcional: Ansible, Portainer, PBS, Restic, consumidor futuro de reverse proxy.
-- Remover: Rundeck, Vault como app deste repo, bootstrap Docker global por defeito, templates legacy, módulos fantasma e placeholders vazios.
+- Manter: `proxmox-base`, inventário, módulos CT/VM, `Ansible`, `PBS`, metadados de networking lógico e de exposição de serviços.
+- Opcional: consumidor futuro de reverse proxy, desde que consuma metadados do inventário sem contaminar o core.
+- Remover: `Vault`, `Rundeck`, `Portainer`, `Restic`, bootstrap Docker global por defeito, templates legacy, módulos fantasma e placeholders vazios.
 
 # 9. Plano de Migração por Fases
 
 1. Congelar o estado atual e fechar o schema alvo do inventário com base em `notas.lmb`.
 2. Modelar `inventory/` e converter o atual `00-inventory.tf` para YAML normalizado, sem ainda mudar o runtime.
 3. Criar `stacks/proxmox-base` e `modules/proxmox-ct`/`proxmox-vm`, primeiro em paridade funcional mínima.
-4. Extrair Portainer/PBS/Restic/Ansible para stacks opcionais, um a um, e remover side effects do core.
+4. Extrair a configuração para três linhas claras: `proxmox-base`, `ansible` e `pbs`, removendo `Portainer`, `Restic`, `Rundeck` e restante lógica operacional acoplada ao core.
 5. Eliminar o root module plano, templates legacy, providers desnecessários e validações baseadas em `null_resource`.
 
 # 10. Riscos e Pontos a Validar Antes de Implementar
 
 - Confirmar se `vmid` passa a explícito; eu recomendo que sim, porque DHCP e redes não-`192.168.<vlan>.0/24` quebram o modelo atual.
-- Confirmar se Docker standalone continua a ser estratégia real. Se não for, Portainer sai já no desenho inicial.
-- Decidir o mecanismo de guest bootstrap: template imagem, Ansible externo ou ambos; manter `remote-exec` como hoje não é sustentável.
+- Decidir o limite exato entre `proxmox-base` e `ansible`, para que o bootstrap mínimo fique do lado certo e `remote-exec` deixe de ser o mecanismo principal.
+- Validar o desenho do `pbs` como integração de infraestrutura, incluindo como CTs e VMs entram em políticas e planos de backup sem reintroduzir lógica imperativa dispersa.
 - Decidir a política de segredos e backend de state, porque hoje não há backend nem `required_version`.
 - Validar a semântica de `services/proxy` para Traefik antes de fixar o schema, para evitar inventário demasiado abstrato ou demasiado “raw labels”.
