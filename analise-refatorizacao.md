@@ -66,12 +66,11 @@ docs/
 # 7. Avaliação das Apps
 
 - Ansible: faz sentido como integração opcional. Terraform não deve continuar a fazer bootstrap imperativo extensivo dentro dos guests; Ansible pode consumir inventário/outputs externos.
-- Vault: não deve existir como app gerida neste repo. É dependência externa de segredos, não base lógica de Proxmox/inventory.
-- Rundeck: o valor aqui é fraco. O atual trigger é side-effectful, não participa no estado e ainda está semanticamente desalinhado com o provider.
-- PBS: faz sentido técnico no ecossistema Proxmox, mas como stack separada e opcional, não no núcleo.
-- Portainer: pode continuar útil se a estratégia for “Docker standalone em CTs”, mas não deve contaminar o stack base.
-- Restic: o restore em `apply` é demasiado intrusivo para ser core. Se ficar, deve ser opcional e separado.
-
+- Vault: não deve existir como app gerida neste repo. É dependência externa de segredos, não base lógica de Proxmox/inventory. ESTE SAI
+- Rundeck: o valor aqui é fraco. O atual trigger é side-effectful, não participa no estado e ainda está semanticamente desalinhado com o provi. ESTE SAI
+- PBS: faz sentido técnico no ecossistema Proxmox, mas como stack separada e opcional, não no núcleo.I NESTE FALO EM INTEGRAS/AUTOMATIZAR/ADICIONARR CT A PLANO DE BACKUPS 
+- Portainer: pode continuar útil se a estratégia for “Docker standalone em CTs”, mas não deve contaminar o stack base.I ESTE SAI
+- Restic: o restore em `apply` é demasiado intrusivo para ser core. Se ficar, deve ser opcional e separado. ESTE SAI
 # 8. Decisões de Manter / Opcional / Remover
 
 - Manter: provisão Proxmox, inventário, módulos CT/VM, metadados de networking lógico e de exposição de serviços.
