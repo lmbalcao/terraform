@@ -58,7 +58,7 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.0.7] - 2026-03-21
+## [v2.0.8] - 2026-03-21
 
-- refactor: scaffold inventory-driven terraform stacks
+- refactor: finalize terraform stacks and archive legacy root
 
