@@ -30,24 +30,19 @@ resource "openwrt_dhcp_domain" "records" {
 }
 
 resource "terraform_data" "firewall_rules" {
-  count = var.openwrt_firewall_enabled && length(local.traefik_services) > 0 ? 1 : 0
+  count = var.openwrt_firewall_enabled ? 1 : 0
 
   input = {
     dns_records       = local.dns_records
     traefik_instances = local.traefik_instances
     firewall_apply    = var.openwrt_firewall_apply
-    firewall_ssh_host = coalesce(var.openwrt_firewall_ssh_host, var.openwrt_hostname)
-    firewall_ssh_port = var.openwrt_firewall_ssh_port
-    firewall_ssh_user = var.openwrt_firewall_ssh_user
   }
 
   triggers_replace = [
     sha256(jsonencode(local.dns_records)),
     sha256(jsonencode(local.traefik_instances)),
-    coalesce(var.openwrt_firewall_ssh_host, var.openwrt_hostname),
-    tostring(var.openwrt_firewall_ssh_port),
-    var.openwrt_firewall_ssh_user,
     tostring(var.openwrt_firewall_apply),
+    plantimestamp(),
   ]
 
   provisioner "local-exec" {
@@ -57,16 +52,23 @@ resource "terraform_data" "firewall_rules" {
       "--environment",
       var.environment,
       "--inventory-root",
-      var.inventory_root,
-      "--openwrt-host",
-      coalesce(var.openwrt_firewall_ssh_host, var.openwrt_hostname),
-      "--openwrt-user",
-      var.openwrt_firewall_ssh_user,
-      "--openwrt-port",
-      tostring(var.openwrt_firewall_ssh_port),
+      abspath("${path.root}/${var.inventory_root}"),
       var.openwrt_firewall_apply ? "--apply" : "",
     ]))
     interpreter = ["/bin/bash", "-lc"]
+
+    environment = {
+      OPENWRT_HOSTNAME         = coalesce(var.openwrt_firewall_ssh_host, var.openwrt_hostname)
+      OPENWRT_PORT             = tostring(var.openwrt_firewall_ssh_port)
+      OPENWRT_SCHEME           = var.openwrt_scheme
+      OPENWRT_USERNAME         = var.openwrt_firewall_ssh_user
+      OPENWRT_PASSWORD         = var.openwrt_password
+      OPENWRT_TLS_INSECURE     = "true"
+      PROXMOX_API_URL          = coalesce(var.proxmox_api_url, "")
+      PROXMOX_API_TOKEN_ID     = coalesce(var.proxmox_api_token_id, "")
+      PROXMOX_API_TOKEN_SECRET = coalesce(var.proxmox_api_token, "")
+      PROXMOX_TLS_INSECURE     = tostring(var.proxmox_tls_insecure)
+    }
   }
 
   depends_on = [openwrt_dhcp_domain.records]

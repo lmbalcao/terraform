@@ -136,6 +136,13 @@ def make_context(tls_insecure: bool) -> ssl.SSLContext | None:
     return context
 
 
+def api_error_is_lock_timeout(status_code: int, body: str) -> bool:
+    if status_code not in {409, 500}:
+        return False
+    detail = body.lower()
+    return any(marker in detail for marker in LOCK_TIMEOUT_MARKERS)
+
+
 def api_request(
     method: str,
     url: str,
@@ -143,6 +150,7 @@ def api_request(
     token_secret: str,
     tls_insecure: bool,
     data: dict[str, str] | None = None,
+    retry_on_lock: bool = False,
 ) -> Any:
     headers = {
         "Authorization": f"PVEAPIToken={token_id}={token_secret}",
@@ -152,21 +160,27 @@ def api_request(
         payload = urllib.parse.urlencode(data).encode("utf-8")
         headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-    request = urllib.request.Request(url, data=payload, headers=headers, method=method)
     context = make_context(tls_insecure)
+    attempts = LOCK_RETRY_ATTEMPTS if retry_on_lock else 1
 
-    try:
-        with urllib.request.urlopen(request, context=context) as response:
-            body = response.read().decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"Proxmox API {method} {url} failed with HTTP {exc.code}: {body}") from exc
-    except urllib.error.URLError as exc:
-        raise SystemExit(f"Proxmox API {method} {url} failed: {exc.reason}") from exc
+    for attempt in range(1, attempts + 1):
+        request = urllib.request.Request(url, data=payload, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(request, context=context) as response:
+                body = response.read().decode("utf-8")
+                if not body:
+                    return {}
+                return json.loads(body)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            if retry_on_lock and attempt < attempts and api_error_is_lock_timeout(exc.code, body):
+                time.sleep(LOCK_RETRY_DELAY_SECONDS)
+                continue
+            raise SystemExit(f"Proxmox API {method} {url} failed with HTTP {exc.code}: {body}") from exc
+        except urllib.error.URLError as exc:
+            raise SystemExit(f"Proxmox API {method} {url} failed: {exc.reason}") from exc
 
-    if not body:
-        return {}
-    return json.loads(body)
+    raise SystemExit(f"Proxmox API {method} {url} failed after exhausting lock retries.")
 
 
 def pct_available() -> bool:
@@ -327,6 +341,7 @@ def main() -> int:
             args.token_secret,
             args.tls_insecure,
             data=update_data,
+            retry_on_lock=True,
         )
         response_data = update_response.get("data")
 

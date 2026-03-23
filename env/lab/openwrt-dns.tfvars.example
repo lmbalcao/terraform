@@ -9,6 +9,9 @@ openwrt_password = "REPLACE_ME"
 
 openwrt_firewall_enabled = true
 openwrt_firewall_apply = true
-openwrt_firewall_ssh_host = "192.168.100.1"
-openwrt_firewall_ssh_port = 22
-openwrt_firewall_ssh_user = "root"
+
+# Required when CT services use DHCP and recommended for runtime firewall reconciliation.
+proxmox_api_url = "https://192.168.35.100:8006/api2/json"
+proxmox_api_token_id = "root@pam!pip"
+proxmox_api_token = "REPLACE_ME"
+proxmox_tls_insecure = true

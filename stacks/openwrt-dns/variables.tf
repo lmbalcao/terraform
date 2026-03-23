@@ -41,30 +41,58 @@ variable "openwrt_password" {
 variable "openwrt_firewall_enabled" {
   type        = bool
   default     = false
-  description = "Whether to validate and reconcile firewall rules for Traefik-exposed services."
+  description = "Whether to validate and reconcile aggregated firewall rules for Traefik-exposed services."
 }
 
 variable "openwrt_firewall_apply" {
   type        = bool
   default     = false
-  description = "Whether to append missing ports to the first compatible OpenWrt firewall rule."
+  description = "Whether to create, update and delete the derived OpenWrt firewall rules instead of failing on drift."
 }
 
 variable "openwrt_firewall_ssh_host" {
   type        = string
   default     = null
   nullable    = true
-  description = "OpenWrt SSH host for firewall checks. Defaults to openwrt_hostname."
+  description = "Optional SSH host override used by the firewall reconciler when applying managed OpenWrt rules."
 }
 
 variable "openwrt_firewall_ssh_port" {
   type        = number
   default     = 22
-  description = "OpenWrt SSH port used by the firewall check script."
+  description = "SSH port used by the firewall reconciler when applying managed OpenWrt rules."
 }
 
 variable "openwrt_firewall_ssh_user" {
   type        = string
   default     = "root"
-  description = "OpenWrt SSH user used by the firewall check script."
+  description = "SSH user used by the firewall reconciler when applying managed OpenWrt rules."
+}
+
+variable "proxmox_api_url" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional Proxmox API URL used to resolve CT runtime IPs for firewall rules."
+}
+
+variable "proxmox_api_token_id" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional Proxmox API token ID used to resolve CT runtime IPs for firewall rules."
+}
+
+variable "proxmox_api_token" {
+  type        = string
+  default     = null
+  nullable    = true
+  sensitive   = true
+  description = "Optional Proxmox API token secret used to resolve CT runtime IPs for firewall rules."
+}
+
+variable "proxmox_tls_insecure" {
+  type        = bool
+  default     = true
+  description = "Disable TLS verification for Proxmox API requests used by firewall reconciliation."
 }

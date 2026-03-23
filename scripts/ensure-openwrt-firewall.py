@@ -2,14 +2,21 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import ipaddress
 import json
 import os
 import re
 import shlex
+import ssl
 import subprocess
 import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -28,6 +35,20 @@ load_workload_directory = VALIDATOR_MODULE.load_workload_directory
 
 TOKEN_SPLIT_RE = re.compile(r"[\s,]+")
 FALSE_VALUES = {"0", "false", "no", "off"}
+MANAGED_RULE_PREFIX = "tfw_"
+MANAGED_RULE_OPTION_KEYS = {
+    "name",
+    "enabled",
+    "target",
+    "proto",
+    "src",
+    "src_ip",
+    "dest",
+    "dest_port",
+    "family",
+}
+PROXMOX_DISCOVERY_ATTEMPTS = 12
+PROXMOX_DISCOVERY_DELAY_SECONDS = 5
 
 
 @dataclass(frozen=True)
@@ -43,6 +64,36 @@ class ServiceCheck:
     target_port: int
 
 
+@dataclass(frozen=True)
+class DesiredRule:
+    section_id: str
+    name: str
+    traefik_tag: str
+    source_ip: str
+    source_zone: str
+    target_zone: str
+    family: str
+    dest_ports: tuple[str, ...]
+    workloads: tuple[str, ...]
+    services: tuple[str, ...]
+    uris: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "section_id": self.section_id,
+            "name": self.name,
+            "traefik_tag": self.traefik_tag,
+            "source_ip": self.source_ip,
+            "source_zone": self.source_zone,
+            "target_zone": self.target_zone,
+            "family": self.family,
+            "dest_ports": list(self.dest_ports),
+            "workloads": list(self.workloads),
+            "services": list(self.services),
+            "uris": list(self.uris),
+        }
+
+
 @dataclass
 class UciSection:
     qualified_id: str
@@ -51,9 +102,159 @@ class UciSection:
     options: dict[str, list[str]] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class ExecResult:
+    code: int
+    stdout: str
+    stderr: str
+
+
+class ProxmoxRequestError(RuntimeError):
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class OpenWrtRPCError(RuntimeError):
+    pass
+
+
+class OpenWrtClient:
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        port: int = 22,
+        scheme: str = "http",
+        tls_insecure: bool = True,
+    ) -> None:
+        self.host = host
+        self.user = user
+        self.password = password
+        self.port = port
+        self.scheme = scheme
+        self.tls_insecure = tls_insecure
+
+    def _run_remote(self, command: list[str]) -> ExecResult:
+        askpass_path = None
+        try:
+            with tempfile.NamedTemporaryFile("w", delete=False, prefix="openwrt-askpass-", suffix=".sh") as handle:
+                handle.write('#!/bin/sh\nprintf "%s\n" "$OPENWRT_SSH_PASSWORD"\n')
+                askpass_path = handle.name
+            os.chmod(askpass_path, 0o700)
+
+            environment = dict(os.environ)
+            environment["DISPLAY"] = environment.get("DISPLAY") or "codex:0"
+            environment["OPENWRT_SSH_PASSWORD"] = self.password
+            environment["SSH_ASKPASS"] = askpass_path
+            environment["SSH_ASKPASS_REQUIRE"] = "force"
+
+            completed = subprocess.run(
+                [
+                    "setsid",
+                    "-w",
+                    "ssh",
+                    "-o",
+                    "BatchMode=no",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-o",
+                    "PubkeyAuthentication=no",
+                    "-o",
+                    "PreferredAuthentications=password,keyboard-interactive",
+                    "-p",
+                    str(self.port),
+                    f"{self.user}@{self.host}",
+                    shlex.join(command),
+                ],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            return ExecResult(
+                code=completed.returncode,
+                stdout=(completed.stdout or "").strip(),
+                stderr=(completed.stderr or "").strip(),
+            )
+        finally:
+            if askpass_path:
+                try:
+                    os.unlink(askpass_path)
+                except FileNotFoundError:
+                    pass
+
+    def _run_shell(self, script: str) -> ExecResult:
+        return self._run_remote(["sh", "-lc", script])
+
+    def exec(self, command: str, params: list[str]) -> ExecResult:
+        return self._run_remote([command, *params])
+
+    def show_config(self, config_name: str) -> str:
+        result = self.exec("uci", ["-q", "show", config_name])
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"uci show {config_name} failed"
+            raise OpenWrtRPCError(detail)
+        return result.stdout.strip()
+
+    def route_get(self, ip_text: str) -> str:
+        ip_obj = ipaddress.ip_address(ip_text)
+        params = ["route", "get", ip_text] if ip_obj.version == 4 else ["-6", "route", "get", ip_text]
+        result = self.exec("ip", params)
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"ip route get {ip_text} failed"
+            raise OpenWrtRPCError(detail)
+        return result.stdout.strip()
+
+    def add_section(self, config: str, section_type: str, section: str, values: dict[str, Any]) -> None:
+        commands = [f"uci set {config}.{section}={shlex.quote(section_type)}"]
+        for key, value in values.items():
+            commands.append(f"uci set {config}.{section}.{key}={shlex.quote(str(value))}")
+        result = self._run_shell(" && ".join(commands))
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"unable to create {config}.{section}"
+            raise OpenWrtRPCError(detail)
+
+    def set_section_values(self, config: str, section: str, values: dict[str, Any]) -> None:
+        commands = [f"uci set {config}.{section}.{key}={shlex.quote(str(value))}" for key, value in values.items()]
+        if not commands:
+            return
+        result = self._run_shell(" && ".join(commands))
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"unable to update {config}.{section}"
+            raise OpenWrtRPCError(detail)
+
+    def delete_section(self, config: str, section: str) -> None:
+        result = self.exec("uci", ["delete", f"{config}.{section}"])
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"unable to delete {config}.{section}"
+            raise OpenWrtRPCError(detail)
+
+    def delete_options(self, config: str, section: str, options: list[str]) -> None:
+        if not options:
+            return
+        commands = [f"uci delete {config}.{section}.{option}" for option in options]
+        result = self._run_shell(" && ".join(commands))
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"unable to delete options from {config}.{section}"
+            raise OpenWrtRPCError(detail)
+
+    def commit(self, config: str) -> None:
+        result = self.exec("uci", ["commit", config])
+        if result.code != 0:
+            detail = result.stderr or result.stdout or f"uci commit {config} failed"
+            raise OpenWrtRPCError(detail)
+
+    def reload_firewall(self) -> None:
+        result = self.exec("/etc/init.d/firewall", ["reload"])
+        if result.code != 0:
+            detail = result.stderr or result.stdout or "firewall reload failed"
+            raise OpenWrtRPCError(detail)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Ensure OpenWrt firewall rules exist for Traefik-to-workload traffic."
+        description="Ensure aggregated OpenWrt firewall rules exist for Traefik-to-workload traffic."
     )
     parser.add_argument("--environment", required=True, help="Inventory environment name.")
     parser.add_argument(
@@ -61,34 +262,71 @@ def parse_args() -> argparse.Namespace:
         default="inventory",
         help="Path to the inventory root relative to the repository root.",
     )
-    parser.add_argument(
-        "--openwrt-host",
-        default=os.environ.get("OPENWRT_HOST"),
-        help="OpenWrt SSH host. Defaults to OPENWRT_HOST.",
-    )
-    parser.add_argument(
-        "--openwrt-user",
-        default=os.environ.get("OPENWRT_USER", "root"),
-        help="OpenWrt SSH user. Defaults to OPENWRT_USER or root.",
-    )
-    parser.add_argument(
-        "--openwrt-port",
-        type=int,
-        default=int(os.environ.get("OPENWRT_PORT", "22")),
-        help="OpenWrt SSH port. Defaults to OPENWRT_PORT or 22.",
-    )
     parser.add_argument("--workload", help="Filter by workload name.")
     parser.add_argument("--service", help="Filter by service name.")
     parser.add_argument("--uri", help="Filter by service URI.")
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Apply the missing port to the first compatible rule when possible.",
+        help="Create, update and delete managed OpenWrt firewall rules to match the derived intent.",
     )
     parser.add_argument(
         "--plan-only",
         action="store_true",
-        help="Only print the derived traffic checks, without contacting OpenWrt.",
+        help="Only print the derived service checks and aggregated firewall rules.",
+    )
+    parser.add_argument(
+        "--openwrt-host",
+        default=os.environ.get("OPENWRT_HOSTNAME") or os.environ.get("OPENWRT_HOST"),
+        help="OpenWrt LuCI hostname or IP. Defaults to OPENWRT_HOSTNAME or OPENWRT_HOST.",
+    )
+    parser.add_argument(
+        "--openwrt-user",
+        default=os.environ.get("OPENWRT_USERNAME") or os.environ.get("OPENWRT_USER", "root"),
+        help="OpenWrt LuCI username. Defaults to OPENWRT_USERNAME or OPENWRT_USER or root.",
+    )
+    parser.add_argument(
+        "--openwrt-password",
+        default=os.environ.get("OPENWRT_PASSWORD"),
+        help="OpenWrt LuCI password. Defaults to OPENWRT_PASSWORD.",
+    )
+    parser.add_argument(
+        "--openwrt-port",
+        type=int,
+        default=int(os.environ.get("OPENWRT_PORT", "80")),
+        help="OpenWrt LuCI port. Defaults to OPENWRT_PORT or 80.",
+    )
+    parser.add_argument(
+        "--openwrt-scheme",
+        default=os.environ.get("OPENWRT_SCHEME", "http"),
+        help="OpenWrt LuCI scheme. Defaults to OPENWRT_SCHEME or http.",
+    )
+    parser.add_argument(
+        "--openwrt-tls-insecure",
+        action="store_true",
+        default=(os.environ.get("OPENWRT_TLS_INSECURE", "true").strip().lower() not in FALSE_VALUES),
+        help="Disable TLS verification for LuCI HTTPS. Defaults to OPENWRT_TLS_INSECURE or true.",
+    )
+    parser.add_argument(
+        "--proxmox-api-url",
+        default=os.environ.get("PROXMOX_API_URL"),
+        help="Proxmox API URL. Defaults to PROXMOX_API_URL.",
+    )
+    parser.add_argument(
+        "--proxmox-token-id",
+        default=os.environ.get("PROXMOX_API_TOKEN_ID"),
+        help="Proxmox API token ID. Defaults to PROXMOX_API_TOKEN_ID.",
+    )
+    parser.add_argument(
+        "--proxmox-token-secret",
+        default=os.environ.get("PROXMOX_API_TOKEN_SECRET") or os.environ.get("PROXMOX_API_TOKEN"),
+        help="Proxmox API token secret. Defaults to PROXMOX_API_TOKEN_SECRET or PROXMOX_API_TOKEN.",
+    )
+    parser.add_argument(
+        "--proxmox-tls-insecure",
+        action="store_true",
+        default=(os.environ.get("PROXMOX_TLS_INSECURE", "true").strip().lower() not in FALSE_VALUES),
+        help="Disable TLS verification for Proxmox API requests. Defaults to PROXMOX_TLS_INSECURE or true.",
     )
     return parser.parse_args()
 
@@ -154,6 +392,189 @@ def normalize_ip_literal(value: str) -> str:
     return str(ipaddress.ip_address(text))
 
 
+def make_context(tls_insecure: bool) -> ssl.SSLContext | None:
+    if not tls_insecure:
+        return None
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
+
+
+def proxmox_api_request(
+    method: str,
+    url: str,
+    token_id: str,
+    token_secret: str,
+    tls_insecure: bool,
+    data: dict[str, str] | None = None,
+) -> Any:
+    headers = {"Authorization": f"PVEAPIToken={token_id}={token_secret}"}
+    payload = None
+    if data is not None:
+        payload = urllib.parse.urlencode(data).encode("utf-8")
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+    request = urllib.request.Request(url, data=payload, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, context=make_context(tls_insecure), timeout=30) as response:
+            body = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise ProxmoxRequestError(
+            f"Proxmox API {method} {url} failed with HTTP {exc.code}: {body}",
+            status_code=exc.code,
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise ProxmoxRequestError(f"Proxmox API {method} {url} failed: {exc.reason}") from exc
+
+    if not body:
+        return {}
+    return json.loads(body)
+
+
+def proxmox_available(args: argparse.Namespace) -> bool:
+    return bool(args.proxmox_api_url and args.proxmox_token_id and args.proxmox_token_secret)
+
+
+def proxmox_error_is_nonfatal(error: ProxmoxRequestError) -> bool:
+    text = str(error).lower()
+    return any(marker in text for marker in ("does not exist", "not running", "vm is not running", "no such file"))
+
+
+def collect_ip_candidates(value: Any) -> list[str]:
+    candidates: set[str] = set()
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, child in node.items():
+                if key.lower() in {"hwaddr", "mac", "hardware-address"}:
+                    continue
+                visit(child)
+            return
+        if isinstance(node, list):
+            for child in node:
+                visit(child)
+            return
+        if not isinstance(node, str):
+            return
+
+        text = node.strip()
+        if not text:
+            return
+        try:
+            ip_obj = ipaddress.ip_interface(text).ip if "/" in text else ipaddress.ip_address(text)
+        except ValueError:
+            return
+        if ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified:
+            return
+        candidates.add(str(ip_obj))
+
+    visit(value)
+    return sorted(candidates, key=lambda item: (ipaddress.ip_address(item).version, item))
+
+
+def choose_runtime_ip(
+    candidates: list[str],
+    preferred_cidr: str | None,
+    configured_address: str | None,
+) -> str | None:
+    if not candidates:
+        return None
+
+    normalized_configured = None
+    if configured_address:
+        normalized_configured = normalize_ip_literal(str(configured_address))
+        if normalized_configured in candidates:
+            return normalized_configured
+
+    preferred_network = None
+    if preferred_cidr:
+        try:
+            preferred_network = ipaddress.ip_network(str(preferred_cidr), strict=False)
+        except ValueError:
+            preferred_network = None
+
+    candidate_ips = [ipaddress.ip_address(item) for item in candidates]
+    if preferred_network is not None:
+        matching = [item for item in candidate_ips if item in preferred_network]
+        if len(matching) == 1:
+            return str(matching[0])
+        if len(matching) > 1:
+            ipv4_matching = [item for item in matching if item.version == 4]
+            if len(ipv4_matching) == 1:
+                return str(ipv4_matching[0])
+            raise SystemExit(
+                f"Multiple runtime IPs match preferred network {preferred_network}: {', '.join(str(item) for item in matching)}"
+            )
+
+    ipv4_candidates = [item for item in candidate_ips if item.version == 4]
+    if len(ipv4_candidates) == 1:
+        return str(ipv4_candidates[0])
+    if len(candidate_ips) == 1:
+        return str(candidate_ips[0])
+    raise SystemExit(f"Unable to choose a unique runtime IP from: {', '.join(candidates)}")
+
+
+def fetch_ct_runtime_ip(workload: dict[str, Any], args: argparse.Namespace) -> str | None:
+    if not proxmox_available(args):
+        return None
+
+    node = workload.get("node")
+    vmid = workload.get("vmid")
+    if node is None or vmid is None:
+        raise SystemExit(f"CT workload {workload.get('name')} is missing node/vmid for runtime IP resolution.")
+
+    network = workload.get("network", {})
+    preferred_cidr = network.get("cidr")
+    configured_address = network.get("address")
+    mode = str(network.get("mode") or "")
+    status_endpoint = f"{args.proxmox_api_url.rstrip('/')}/nodes/{node}/lxc/{vmid}/status/current"
+    interfaces_endpoint = f"{args.proxmox_api_url.rstrip('/')}/nodes/{node}/lxc/{vmid}/interfaces"
+
+    try:
+        status_response = proxmox_api_request(
+            "GET",
+            status_endpoint,
+            args.proxmox_token_id,
+            args.proxmox_token_secret,
+            args.proxmox_tls_insecure,
+        )
+    except ProxmoxRequestError as error:
+        if proxmox_error_is_nonfatal(error):
+            return None
+        raise SystemExit(str(error)) from error
+
+    ct_status = str(status_response.get("data", {}).get("status") or "")
+    if mode == "dhcp" and ct_status and ct_status.lower() != "running":
+        return None
+
+    for _ in range(1, PROXMOX_DISCOVERY_ATTEMPTS + 1):
+        try:
+            response = proxmox_api_request(
+                "GET",
+                interfaces_endpoint,
+                args.proxmox_token_id,
+                args.proxmox_token_secret,
+                args.proxmox_tls_insecure,
+            )
+        except ProxmoxRequestError as error:
+            if proxmox_error_is_nonfatal(error):
+                return None
+            raise SystemExit(str(error)) from error
+
+        payload = response.get("data", response)
+        runtime_ip = choose_runtime_ip(collect_ip_candidates(payload), preferred_cidr, configured_address)
+        if runtime_ip is not None:
+            return runtime_ip
+        if mode != "dhcp":
+            return None
+
+        time.sleep(PROXMOX_DISCOVERY_DELAY_SECONDS)
+
+    return None
+
+
 def build_service_checks(document: dict[str, Any], args: argparse.Namespace) -> list[ServiceCheck]:
     checks: list[ServiceCheck] = []
     ingress = document["ingress"]
@@ -169,9 +590,13 @@ def build_service_checks(document: dict[str, Any], args: argparse.Namespace) -> 
                 continue
 
             network = workload.get("network", {})
-            address = network.get("address")
+            configured_address = network.get("address")
             mode = network.get("mode")
             services = workload.get("services", [])
+
+            runtime_target_ip: str | None = None
+            if workload_kind == "ct":
+                runtime_target_ip = fetch_ct_runtime_ip(workload, args)
 
             for service in services:
                 traefik_tag = service.get("traefik_tag")
@@ -186,10 +611,6 @@ def build_service_checks(document: dict[str, Any], args: argparse.Namespace) -> 
                     continue
                 if args.uri and uri != args.uri:
                     continue
-                if mode != "static" or not address:
-                    raise SystemExit(
-                        f"Workload {workload_name} service {service_name} needs a static address for firewall checks."
-                    )
                 if traefik_tag not in ingress:
                     raise SystemExit(
                         f"Service {service_name} references unknown Traefik instance {traefik_tag}."
@@ -198,6 +619,18 @@ def build_service_checks(document: dict[str, Any], args: argparse.Namespace) -> 
                 traefik_address = ingress[traefik_tag].get("address")
                 if not traefik_address:
                     raise SystemExit(f"Traefik instance {traefik_tag} is missing address in ingress.yaml.")
+
+                target_ip = runtime_target_ip
+                if target_ip is None and mode == "static" and configured_address:
+                    target_ip = normalize_ip_literal(str(configured_address))
+                if target_ip is None and workload_kind == "vm" and configured_address:
+                    target_ip = normalize_ip_literal(str(configured_address))
+                if target_ip is None:
+                    print(
+                        f"SKIP {workload_kind}/{workload_name}/{service_name}: unable to determine backend IP.",
+                        file=sys.stderr,
+                    )
+                    continue
 
                 checks.append(
                     ServiceCheck(
@@ -208,31 +641,12 @@ def build_service_checks(document: dict[str, Any], args: argparse.Namespace) -> 
                         traefik_tag=str(traefik_tag),
                         traefik_label=traefik_label,
                         source_ip=normalize_ip_literal(str(traefik_address)),
-                        target_ip=normalize_ip_literal(str(address)),
+                        target_ip=target_ip,
                         target_port=int(port),
                     )
                 )
 
-    return sorted(checks, key=lambda item: (item.workload_name, item.service_name, item.uri, item.target_port))
-
-
-def run_ssh(host: str, user: str, port: int, remote_command: str) -> str:
-    command = [
-        "ssh",
-        "-o",
-        "BatchMode=yes",
-        "-o",
-        "StrictHostKeyChecking=accept-new",
-        "-p",
-        str(port),
-        f"{user}@{host}",
-        remote_command,
-    ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or f"SSH command failed: {remote_command}"
-        raise SystemExit(detail)
-    return result.stdout.strip()
+    return sorted(checks, key=lambda item: (item.traefik_tag, item.workload_name, item.service_name, item.uri, item.target_port))
 
 
 def strip_uci_value(value: str) -> str:
@@ -259,10 +673,7 @@ def parse_uci_show(text: str, package_name: str) -> list[UciSection]:
         section_id = parts[1]
         section = by_id.get(section_id)
         if section is None:
-            section = UciSection(
-                qualified_id=f"{package_name}.{section_id}",
-                section_id=section_id,
-            )
+            section = UciSection(qualified_id=f"{package_name}.{section_id}", section_id=section_id)
             by_id[section_id] = section
             sections.append(section)
 
@@ -292,11 +703,6 @@ def split_option_words(values: list[str]) -> list[str]:
             if token:
                 words.append(token)
     return words
-
-
-def option_enabled(section: UciSection) -> bool:
-    value = option_first(section, "enabled")
-    return value is None or value.strip().lower() not in FALSE_VALUES
 
 
 def build_device_interface_map(network_sections: list[UciSection]) -> dict[str, list[str]]:
@@ -338,258 +744,238 @@ def extract_route_device(route_output: str) -> str:
     return match.group(1)
 
 
-def rule_allows_tcp(rule: UciSection) -> bool:
-    proto_words = split_option_words(option_values(rule, "proto"))
-    if not proto_words:
-        return False
-    for word in proto_words:
-        lower_word = word.lower()
-        if lower_word in {"all", "tcp", "tcpudp"} or "tcp" in lower_word:
-            return True
-    return False
+def sanitize_identifier(text: str) -> str:
+    normalized = re.sub(r"[^0-9a-z_]+", "_", text.lower())
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    return normalized or "rule"
 
 
-def port_matches_tokens(tokens: list[str], target_port: int) -> bool:
-    for token in tokens:
-        if token.isdigit() and int(token) == target_port:
-            return True
-
-        if "-" in token or ":" in token:
-            delimiter = "-" if "-" in token else ":"
-            start_text, end_text = token.split(delimiter, 1)
-            if not start_text.isdigit() or not end_text.isdigit():
-                continue
-            start = int(start_text)
-            end = int(end_text)
-            if start <= target_port <= end:
-                return True
-    return False
+def bounded_identifier(*parts: str) -> str:
+    raw = sanitize_identifier("_".join(parts))
+    if len(raw) <= 63:
+        return raw
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:8]
+    return f"{raw[:54]}_{digest}"
 
 
-def ip_family_matches(rule: UciSection, ip_text: str) -> bool:
-    family = (option_first(rule, "family") or "").strip().lower()
-    if not family or family == "any":
-        return True
-    ip_version = ipaddress.ip_address(ip_text).version
-    return (family == "ipv4" and ip_version == 4) or (family == "ipv6" and ip_version == 6)
+def port_sort_key(token: str) -> tuple[int, str]:
+    return (0, f"{int(token):05d}") if token.isdigit() else (1, token)
 
 
-def ip_constraint_matches(rule: UciSection, key: str, address_text: str) -> bool:
-    entries = split_option_words(option_values(rule, key))
-    if not entries:
-        return True
-
-    address = ipaddress.ip_address(address_text)
-    for entry in entries:
-        if entry == address_text:
-            return True
-        try:
-            if address in ipaddress.ip_network(entry, strict=False):
-                return True
-        except ValueError:
-            continue
-    return False
+def normalize_port_tokens(tokens: list[str]) -> list[str]:
+    unique = sorted({token for token in tokens if token}, key=port_sort_key)
+    return unique
 
 
-def summarize_rule(rule: UciSection) -> dict[str, Any]:
+def desired_rule_options(rule: DesiredRule) -> dict[str, str]:
     return {
-        "section_id": rule.section_id,
-        "qualified_id": rule.qualified_id,
-        "name": option_first(rule, "name"),
-        "target": option_first(rule, "target"),
-        "proto": split_option_words(option_values(rule, "proto")),
-        "src": option_first(rule, "src"),
-        "dest": option_first(rule, "dest"),
-        "family": option_first(rule, "family"),
-        "src_ip": split_option_words(option_values(rule, "src_ip")),
-        "dest_ip": split_option_words(option_values(rule, "dest_ip")),
-        "dest_port": split_option_words(option_values(rule, "dest_port")),
+        "name": rule.name,
+        "enabled": "1",
+        "target": "ACCEPT",
+        "proto": "tcp",
+        "src": rule.source_zone,
+        "src_ip": rule.source_ip,
+        "dest": rule.target_zone,
+        "dest_port": " ".join(rule.dest_ports),
+        "family": rule.family,
     }
 
 
-def render_rule_summary(rule: UciSection) -> str:
-    return json.dumps(summarize_rule(rule), sort_keys=True)
+def current_managed_rule_options(section: UciSection) -> dict[str, str]:
+    return {
+        "name": option_first(section, "name") or "",
+        "enabled": option_first(section, "enabled") or "1",
+        "target": option_first(section, "target") or "",
+        "proto": " ".join(split_option_words(option_values(section, "proto"))),
+        "src": option_first(section, "src") or "",
+        "src_ip": " ".join(split_option_words(option_values(section, "src_ip"))),
+        "dest": option_first(section, "dest") or "",
+        "dest_port": " ".join(normalize_port_tokens(split_option_words(option_values(section, "dest_port")))),
+        "family": option_first(section, "family") or "",
+    }
 
 
-def apply_dest_port_update(host: str, user: str, port: int, rule: UciSection, target_port: int) -> str:
-    existing_tokens = split_option_words(option_values(rule, "dest_port"))
-    updated_tokens = existing_tokens + [str(target_port)]
-    seen: set[str] = set()
-    normalized_tokens: list[str] = []
-    for token in updated_tokens:
-        if token in seen:
-            continue
-        seen.add(token)
-        normalized_tokens.append(token)
-
-    dest_port_value = " ".join(normalized_tokens)
-    remote_command = " && ".join(
-        [
-            f"uci set {rule.qualified_id}.dest_port={shlex.quote(dest_port_value)}",
-            "uci commit firewall",
-            "/etc/init.d/firewall reload",
-            f"uci -q show {rule.qualified_id}",
-        ]
-    )
-    return run_ssh(host, user, port, remote_command)
+def is_managed_rule(section: UciSection) -> bool:
+    return section.section_type == "rule" and section.section_id.startswith(MANAGED_RULE_PREFIX)
 
 
-def evaluate_service(
-    service: ServiceCheck,
+def build_desired_rules(
+    checks: list[ServiceCheck],
+    network_sections: list[UciSection],
     firewall_sections: list[UciSection],
-    device_map: dict[str, list[str]],
-    interface_zone_map: dict[str, str],
     route_cache: dict[str, str],
-    args: argparse.Namespace,
-) -> str:
-    source_route = route_cache[service.source_ip]
-    target_route = route_cache[service.target_ip]
+) -> list[DesiredRule]:
+    device_map = build_device_interface_map(network_sections)
+    interface_zone_map = build_interface_zone_map(firewall_sections)
+    grouped: dict[tuple[str, str, str, str, str], dict[str, set[str]]] = {}
 
-    source_device = extract_route_device(source_route)
-    target_device = extract_route_device(target_route)
-    source_interface = resolve_interface(source_device, device_map)
-    target_interface = resolve_interface(target_device, device_map)
+    for check in checks:
+        source_route = route_cache[check.source_ip]
+        target_route = route_cache[check.target_ip]
+        source_device = extract_route_device(source_route)
+        target_device = extract_route_device(target_route)
+        source_interface = resolve_interface(source_device, device_map)
+        target_interface = resolve_interface(target_device, device_map)
+        source_zone = interface_zone_map.get(source_interface)
+        target_zone = interface_zone_map.get(target_interface)
+        if source_zone is None:
+            raise SystemExit(f"No firewall zone maps to interface {source_interface} for source IP {check.source_ip}.")
+        if target_zone is None:
+            raise SystemExit(f"No firewall zone maps to interface {target_interface} for target IP {check.target_ip}.")
 
-    source_zone = interface_zone_map.get(source_interface)
-    target_zone = interface_zone_map.get(target_interface)
-    if source_zone is None:
-        raise SystemExit(f"No firewall zone maps to interface {source_interface} for source IP {service.source_ip}.")
-    if target_zone is None:
-        raise SystemExit(f"No firewall zone maps to interface {target_interface} for target IP {service.target_ip}.")
-
-    print(
-        json.dumps(
-            {
-                "service": service.service_name,
-                "uri": service.uri,
-                "source_ip": service.source_ip,
-                "source_device": source_device,
-                "source_interface": source_interface,
-                "source_zone": source_zone,
-                "target_ip": service.target_ip,
-                "target_device": target_device,
-                "target_interface": target_interface,
-                "target_zone": target_zone,
-                "target_port": service.target_port,
-            },
-            sort_keys=True,
-        )
-    )
-
-    exact_match: UciSection | None = None
-    wildcard_match: UciSection | None = None
-    update_candidate: UciSection | None = None
-
-    for section in firewall_sections:
-        if section.section_type != "rule":
-            continue
-        if not option_enabled(section):
-            continue
-        if (option_first(section, "target") or "").upper() != "ACCEPT":
-            continue
-        if option_first(section, "src") != source_zone:
-            continue
-        if option_first(section, "dest") != target_zone:
-            continue
-        if not rule_allows_tcp(section):
-            continue
-        if not ip_family_matches(section, service.target_ip):
-            continue
-        if not ip_constraint_matches(section, "src_ip", service.source_ip):
-            continue
-        if not ip_constraint_matches(section, "dest_ip", service.target_ip):
-            continue
-
-        port_tokens = split_option_words(option_values(section, "dest_port"))
-        if not port_tokens:
-            if wildcard_match is None:
-                wildcard_match = section
-            continue
-        if port_matches_tokens(port_tokens, service.target_port):
-            exact_match = section
-            break
-        if update_candidate is None:
-            update_candidate = section
-
-    if exact_match is not None:
-        print(f"MATCH {service.workload_name}/{service.service_name}: {render_rule_summary(exact_match)}")
-        return "match"
-
-    if wildcard_match is not None:
+        family = "ipv6" if ipaddress.ip_address(check.target_ip).version == 6 else "ipv4"
         print(
-            f"MATCH_ANY_PORT {service.workload_name}/{service.service_name}: "
-            f"{render_rule_summary(wildcard_match)}"
-        )
-        return "match"
-
-    if update_candidate is not None:
-        if args.apply:
-            updated_state = apply_dest_port_update(
-                args.openwrt_host,
-                args.openwrt_user,
-                args.openwrt_port,
-                update_candidate,
-                service.target_port,
+            json.dumps(
+                {
+                    "service": check.service_name,
+                    "uri": check.uri,
+                    "traefik_tag": check.traefik_tag,
+                    "source_ip": check.source_ip,
+                    "source_zone": source_zone,
+                    "target_ip": check.target_ip,
+                    "target_zone": target_zone,
+                    "target_port": check.target_port,
+                },
+                sort_keys=True,
             )
-            print(f"UPDATED {service.workload_name}/{service.service_name}: {updated_state.strip()}")
-            return "updated"
-        print(
-            f"NEEDS_UPDATE {service.workload_name}/{service.service_name}: would add port "
-            f"{service.target_port} to {render_rule_summary(update_candidate)}"
         )
-        return "needs_update"
+        key = (check.traefik_tag, check.source_ip, source_zone, target_zone, family)
+        bucket = grouped.setdefault(
+            key,
+            {"ports": set(), "workloads": set(), "services": set(), "uris": set()},
+        )
+        bucket["ports"].add(str(check.target_port))
+        bucket["workloads"].add(check.workload_name)
+        bucket["services"].add(f"{check.workload_name}/{check.service_name}")
+        bucket["uris"].add(check.uri)
 
-    print(
-        f"MISSING {service.workload_name}/{service.service_name}: no compatible rule for "
-        f"{source_zone} -> {target_zone} tcp/{service.target_port}"
+    rules: list[DesiredRule] = []
+    for (traefik_tag, source_ip, source_zone, target_zone, family), bucket in sorted(grouped.items()):
+        name = f"{traefik_tag} -> {target_zone}" if family == "ipv4" else f"{traefik_tag} -> {target_zone} ({family})"
+        rules.append(
+            DesiredRule(
+                section_id=bounded_identifier(MANAGED_RULE_PREFIX.rstrip("_"), traefik_tag, target_zone, family),
+                name=name,
+                traefik_tag=traefik_tag,
+                source_ip=source_ip,
+                source_zone=source_zone,
+                target_zone=target_zone,
+                family=family,
+                dest_ports=tuple(normalize_port_tokens(list(bucket["ports"]))),
+                workloads=tuple(sorted(bucket["workloads"])),
+                services=tuple(sorted(bucket["services"])),
+                uris=tuple(sorted(bucket["uris"])),
+            )
+        )
+
+    return rules
+
+
+def load_openwrt_client(args: argparse.Namespace) -> OpenWrtClient:
+    if not args.openwrt_host or not args.openwrt_password:
+        raise SystemExit("OpenWrt host and password are required for firewall reconciliation.")
+    return OpenWrtClient(
+        host=args.openwrt_host,
+        user=args.openwrt_user,
+        password=args.openwrt_password,
+        port=args.openwrt_port,
+        scheme=args.openwrt_scheme,
+        tls_insecure=args.openwrt_tls_insecure,
     )
-    return "missing"
+
+
+def reconcile_rules(
+    client: OpenWrtClient,
+    firewall_sections: list[UciSection],
+    desired_rules: list[DesiredRule],
+    apply: bool,
+) -> tuple[bool, list[str]]:
+    desired_by_id = {rule.section_id: rule for rule in desired_rules}
+    current_by_id = {section.section_id: section for section in firewall_sections if is_managed_rule(section)}
+    actions: list[str] = []
+    drift = False
+
+    for section_id, rule in desired_by_id.items():
+        desired_options = desired_rule_options(rule)
+        current = current_by_id.get(section_id)
+        if current is None:
+            drift = True
+            actions.append(f"CREATE {rule.name}: {json.dumps(rule.as_dict(), sort_keys=True)}")
+            if apply:
+                client.add_section("firewall", "rule", section_id, desired_options)
+            continue
+
+        current_options = current_managed_rule_options(current)
+        set_values = {key: value for key, value in desired_options.items() if current_options.get(key, "") != value}
+        delete_keys = [
+            key for key in MANAGED_RULE_OPTION_KEYS if key not in desired_options and option_values(current, key)
+        ]
+        if set_values or delete_keys:
+            drift = True
+            actions.append(
+                f"UPDATE {rule.name}: {json.dumps({'set': set_values, 'delete': delete_keys}, sort_keys=True)}"
+            )
+            if apply:
+                if set_values:
+                    client.set_section_values("firewall", section_id, set_values)
+                if delete_keys:
+                    client.delete_options("firewall", section_id, delete_keys)
+        else:
+            actions.append(f"MATCH {rule.name}: {json.dumps(rule.as_dict(), sort_keys=True)}")
+
+    for section_id, current in sorted(current_by_id.items()):
+        if section_id in desired_by_id:
+            continue
+        drift = True
+        actions.append(
+            f"DELETE {option_first(current, 'name') or section_id}: {json.dumps(current_managed_rule_options(current), sort_keys=True)}"
+        )
+        if apply:
+            client.delete_section("firewall", section_id)
+
+    if apply and drift:
+        client.commit("firewall")
+        client.reload_firewall()
+
+    return drift, actions
 
 
 def main() -> int:
     args = parse_args()
-    if not args.plan_only and not args.openwrt_host:
-        print("--openwrt-host or OPENWRT_HOST is required unless --plan-only is used.", file=sys.stderr)
+    if not args.plan_only and (not args.openwrt_host or not args.openwrt_password):
+        print(
+            "OpenWrt connection details are required unless --plan-only is used.",
+            file=sys.stderr,
+        )
         return 2
 
     repo_root = Path(__file__).resolve().parent.parent
     document = load_inventory_environment(repo_root, args.inventory_root, args.environment)
     checks = build_service_checks(document, args)
 
-    if not checks:
-        print("No Traefik-exposed services matched the requested filters.")
-        return 0
+    if args.plan_only and not checks:
+        print("No Traefik-exposed services produced firewall checks.")
 
-    if args.plan_only:
-        for check in checks:
-            print(json.dumps(check.__dict__, sort_keys=True))
-        return 0
-
-    network_text = run_ssh(args.openwrt_host, args.openwrt_user, args.openwrt_port, "uci -q show network")
-    firewall_text = run_ssh(args.openwrt_host, args.openwrt_user, args.openwrt_port, "uci -q show firewall")
-
-    network_sections = parse_uci_show(network_text, "network")
-    firewall_sections = parse_uci_show(firewall_text, "firewall")
-    device_map = build_device_interface_map(network_sections)
-    interface_zone_map = build_interface_zone_map(firewall_sections)
+    client = load_openwrt_client(args)
+    network_sections = parse_uci_show(client.show_config("network"), "network")
+    firewall_sections = parse_uci_show(client.show_config("firewall"), "firewall")
 
     route_cache: dict[str, str] = {}
     unique_ips = sorted({check.source_ip for check in checks} | {check.target_ip for check in checks})
     for ip_text in unique_ips:
-        route_cache[ip_text] = run_ssh(
-            args.openwrt_host,
-            args.openwrt_user,
-            args.openwrt_port,
-            f"ip route get {shlex.quote(ip_text)}",
-        )
+        route_cache[ip_text] = client.route_get(ip_text)
 
-    statuses: list[str] = []
-    for check in checks:
-        statuses.append(evaluate_service(check, firewall_sections, device_map, interface_zone_map, route_cache, args))
+    desired_rules = build_desired_rules(checks, network_sections, firewall_sections, route_cache)
+    if args.plan_only:
+        print("DESIRED_RULES")
+        for rule in desired_rules:
+            print(json.dumps(rule.as_dict(), sort_keys=True))
 
-    if any(status == "missing" for status in statuses):
-        return 1
-    if not args.apply and any(status == "needs_update" for status in statuses):
+    drift, actions = reconcile_rules(client, firewall_sections, desired_rules, args.apply)
+    for action in actions:
+        print(action)
+
+    if drift and not args.apply:
         return 1
     return 0
 

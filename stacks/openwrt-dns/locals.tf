@@ -89,7 +89,7 @@ locals {
   dns_records = {
     for service in local.traefik_services : service.uri => merge(service, {
       address    = local.traefik_instances[service.traefik_tag].address
-      section_id = substr(regexreplace(lower(format("dns-%s-%s", service.traefik_tag, service.uri)), "[^0-9a-z_-]+", "_"), 0, 63)
+      section_id = substr(replace(replace(replace(lower(format("dns-%s-%s", service.traefik_tag, service.uri)), ".", "_"), "-", "_"), ":", "_"), 0, 63)
     })
     if contains(keys(local.traefik_instances), service.traefik_tag)
   }

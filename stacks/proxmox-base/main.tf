@@ -106,23 +106,55 @@ resource "terraform_data" "ct_manual_features" {
   ]
 
   provisioner "local-exec" {
-    command = join(" ", compact([
-      "python3",
-      "${path.root}/../../scripts/apply-proxmox-ct-features.py",
-      "--node",
-      module.cts[each.key].target_node,
-      "--vmid",
-      tostring(module.cts[each.key].vmid),
-      each.value.nesting ? "--nesting" : "",
-      each.value.keyctl ? "--keyctl" : "",
-      each.value.fuse ? "--fuse" : "",
-      each.value.mount != "" ? format("--mount %s", jsonencode(each.value.mount)) : "",
-      each.value.description != "" ? format("--description %s", jsonencode(each.value.description)) : "--delete-description",
-      each.value.nameserver != "" ? format("--nameserver %s", jsonencode(each.value.nameserver)) : "--delete-nameserver",
-      each.value.searchdomain != "" ? format("--searchdomain %s", jsonencode(each.value.searchdomain)) : "--delete-searchdomain",
-    ]))
+    command     = <<-EOT
+      args=(
+        python3
+        ${path.root}/../../scripts/apply-proxmox-ct-features.py
+        --node "$CT_NODE"
+        --vmid "$CT_VMID"
+      )
+
+      if [ "$CT_NESTING" = "1" ]; then
+        args+=(--nesting)
+      fi
+      if [ "$CT_KEYCTL" = "1" ]; then
+        args+=(--keyctl)
+      fi
+      if [ "$CT_FUSE" = "1" ]; then
+        args+=(--fuse)
+      fi
+      if [ -n "$CT_MOUNT" ]; then
+        args+=(--mount "$CT_MOUNT")
+      fi
+      if [ -n "$CT_DESCRIPTION" ]; then
+        args+=(--description "$CT_DESCRIPTION")
+      else
+        args+=(--delete-description)
+      fi
+      if [ -n "$CT_NAMESERVER" ]; then
+        args+=(--nameserver "$CT_NAMESERVER")
+      else
+        args+=(--delete-nameserver)
+      fi
+      if [ -n "$CT_SEARCHDOMAIN" ]; then
+        args+=(--searchdomain "$CT_SEARCHDOMAIN")
+      else
+        args+=(--delete-searchdomain)
+      fi
+
+      "$${args[@]}"
+    EOT
     interpreter = ["/bin/bash", "-lc"]
     environment = {
+      CT_NODE                  = module.cts[each.key].target_node
+      CT_VMID                  = tostring(module.cts[each.key].vmid)
+      CT_NESTING               = each.value.nesting ? "1" : "0"
+      CT_KEYCTL                = each.value.keyctl ? "1" : "0"
+      CT_FUSE                  = each.value.fuse ? "1" : "0"
+      CT_MOUNT                 = each.value.mount
+      CT_DESCRIPTION           = each.value.description
+      CT_NAMESERVER            = each.value.nameserver
+      CT_SEARCHDOMAIN          = each.value.searchdomain
       PROXMOX_API_URL          = var.proxmox_api_url
       PROXMOX_API_TOKEN_ID     = var.proxmox_api_token_id
       PROXMOX_API_TOKEN_SECRET = var.proxmox_api_token
