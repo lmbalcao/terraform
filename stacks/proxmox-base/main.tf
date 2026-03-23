@@ -84,6 +84,47 @@ module "cts" {
   features        = try(each.value.lxc.features, {})
 }
 
+resource "terraform_data" "ct_manual_features" {
+  for_each = local.cts_with_manual_features
+
+  input = {
+    ct_name = each.key
+    node    = module.cts[each.key].target_node
+    vmid    = module.cts[each.key].vmid
+    keyctl  = each.value.keyctl
+    fuse    = each.value.fuse
+    mount   = each.value.mount
+    create  = each.value.create
+  }
+
+  triggers_replace = [
+    tostring(module.cts[each.key].id),
+    sha256(jsonencode(each.value)),
+  ]
+
+  provisioner "local-exec" {
+    command = join(" ", compact([
+      "python3",
+      "${path.root}/../../scripts/apply-proxmox-ct-features.py",
+      "--node",
+      module.cts[each.key].target_node,
+      "--vmid",
+      tostring(module.cts[each.key].vmid),
+      each.value.keyctl ? "--keyctl" : "",
+      each.value.fuse ? "--fuse" : "",
+      each.value.create ? "--create" : "",
+      each.value.mount != "" ? format("--mount %s", jsonencode(each.value.mount)) : "",
+    ]))
+    interpreter = ["/bin/bash", "-lc"]
+    environment = {
+      PROXMOX_API_URL          = var.proxmox_api_url
+      PROXMOX_API_TOKEN_ID     = var.proxmox_api_token_id
+      PROXMOX_API_TOKEN_SECRET = var.proxmox_api_token
+      PROXMOX_TLS_INSECURE     = "true"
+    }
+  }
+}
+
 module "vms" {
   for_each = local.vms
   source   = "../../modules/proxmox-vm"

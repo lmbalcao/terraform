@@ -133,5 +133,5 @@ variable "features" {
     nesting = optional(bool, true)
   })
   default     = {}
-  description = "Supported LXC features."
+  description = "Provider-managed LXC features handled directly during CT creation (currently nesting only)."
 }

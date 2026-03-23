@@ -481,7 +481,16 @@ def validate_ct_workload(
     if "template" in lxc and lxc["template"] is not None:
         expect_type(lxc["template"], str, f"{context}.lxc.template", errors)
     if "features" in lxc:
-        require_mapping(lxc["features"], f"{context}.lxc.features", errors)
+        features = require_mapping(lxc["features"], f"{context}.lxc.features", errors)
+        if "nesting" in features and features["nesting"] is not None:
+            expect_type(features["nesting"], bool, f"{context}.lxc.features.nesting", errors)
+    if "features_manual" in lxc:
+        features_manual = require_mapping(lxc["features_manual"], f"{context}.lxc.features_manual", errors)
+        for key in ("keyctl", "fuse", "create"):
+            if key in features_manual and features_manual[key] is not None:
+                expect_type(features_manual[key], bool, f"{context}.lxc.features_manual.{key}", errors)
+        if "mount" in features_manual and features_manual["mount"] is not None:
+            expect_type(features_manual["mount"], str, f"{context}.lxc.features_manual.mount", errors)
     if "mounts" in lxc:
         require_list(lxc["mounts"], f"{context}.lxc.mounts", errors)
 

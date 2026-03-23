@@ -18,6 +18,7 @@ defaults:
       unprivileged: true
       features:
         nesting: true
+      features_manual: {}
       mounts: []
   vm:
     enabled: true

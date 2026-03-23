@@ -28,6 +28,8 @@ required_files=(
   schemas/inventory-environment.schema.json
   inventory/lab/ingress.yaml
   scripts/update-changelog.py
+  scripts/apply-proxmox-ct-features.py
+  scripts/ensure-openwrt-firewall.py
   scripts/validate-inventory.py
   scripts/validate-inventory.sh
   scripts/plan-stack.sh

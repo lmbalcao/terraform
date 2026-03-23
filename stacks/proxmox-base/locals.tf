@@ -129,6 +129,19 @@ locals {
     if ct.network.mode == "static" && (try(ct.network.address, null) == null || try(ct.network.gateway, null) == null)
   ]
 
+  cts_with_manual_features = {
+    for name, ct in local.cts : name => {
+      keyctl = try(ct.lxc.features_manual.keyctl, false)
+      fuse   = try(ct.lxc.features_manual.fuse, false)
+      mount  = try(trimspace(ct.lxc.features_manual.mount), "")
+      create = try(ct.lxc.features_manual.create, false)
+    }
+    if try(ct.lxc.features_manual.keyctl, false)
+    || try(ct.lxc.features_manual.fuse, false)
+    || try(trimspace(ct.lxc.features_manual.mount), "") != ""
+    || try(ct.lxc.features_manual.create, false)
+  }
+
   vm_invalid_static_networks = [
     for name, vm in local.vms : name
     if vm.network.mode == "static" && (try(vm.network.address, null) == null || try(vm.network.gateway, null) == null)

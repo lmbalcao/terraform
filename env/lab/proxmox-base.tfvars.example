@@ -1,9 +1,11 @@
-# Copy to env/lab/proxmox-base.tfvars and fill with real values.
-proxmox_api_url = "https://proxmox.example.invalid:8006/api2/json"
-proxmox_api_token_id = "terraform@pve!lab"
+# Copy to env/lab/proxmox-base.tfvars and fill with real secrets.
+proxmox_api_url = "https://192.168.35.100:8006/api2/json"
+proxmox_api_token_id = "root@pam!pip"
 proxmox_api_token = "REPLACE_ME"
 root_password = "REPLACE_ME"
-
+default_search_domain = "lbtec.org"
+default_lxc_template = "local:vztmpl/debian-13-standard_amd64.tar.zst"
+network_bridge = "vmbr0"
 ssh_public_keys = [
   "ssh-ed25519 AAAA... replace-me",
 ]

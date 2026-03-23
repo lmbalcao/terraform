@@ -58,6 +58,7 @@ defaults:
       unprivileged: true
       features:
         nesting: true
+      features_manual: {}
       mounts: []
   vm:
     enabled: true
@@ -340,6 +341,11 @@ lxc:
   unprivileged: true
   features:
     nesting: true
+  features_manual:
+    keyctl: false
+    fuse: false
+    mount: ""
+    create: false
   mounts:
     - slot: mp0
       host_path: /srv/data
@@ -347,6 +353,12 @@ lxc:
       backup: false
       read_only: false
 ```
+
+Regras adicionais para CTs:
+
+- `lxc.features.nesting` continua a ser gerido diretamente pelo recurso Terraform
+- `lxc.features_manual.keyctl`, `fuse`, `mount` e `create` sao reconciliadas apos a criacao do CT
+- `features_manual` existe para manter compatibilidade com templates e comportamento legacy sem alterar o tratamento direto de `nesting`
 
 ## Campos Especificos de VM
 
@@ -390,6 +402,11 @@ lxc:
   unprivileged: true
   features:
     nesting: true
+  features_manual:
+    keyctl: false
+    fuse: false
+    mount: ""
+    create: false
   mounts: []
 services: []
 operations:
