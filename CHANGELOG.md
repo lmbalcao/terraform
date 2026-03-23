@@ -58,7 +58,7 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.0.8] - 2026-03-21
+## [v2.0.9] - 2026-03-23
 
-- refactor: finalize terraform stacks and archive legacy root
+- Add CT feature reconciliation and OpenWrt firewall checks
 
