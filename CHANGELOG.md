@@ -58,7 +58,7 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.0.10] - 2026-03-23
+## [v2.0.11] - 2026-03-23
 
-- Fix Proxmox CT post-create reconciliation
+- Add aggregated Traefik zone firewall reconciliation
 
