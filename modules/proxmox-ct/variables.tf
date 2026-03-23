@@ -106,7 +106,9 @@ variable "network_bridge" {
 
 variable "network_tag" {
   type        = number
-  description = "VLAN tag."
+  default     = null
+  nullable    = true
+  description = "Optional VLAN tag. Use null or 0 for untagged access bridges."
 }
 
 variable "network_mode" {
@@ -133,5 +135,5 @@ variable "features" {
     nesting = optional(bool, true)
   })
   default     = {}
-  description = "Provider-managed LXC features handled directly during CT creation (currently nesting only)."
+  description = "Desired LXC feature flags reconciled after CT creation (currently nesting only here; keyctl/fuse/mount use features_manual)."
 }

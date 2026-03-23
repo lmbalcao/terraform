@@ -16,10 +16,6 @@ resource "proxmox_lxc" "this" {
   onboot = var.on_boot
   start  = var.start
 
-  features {
-    nesting = try(var.features.nesting, true)
-  }
-
   ssh_public_keys = length(var.ssh_public_keys) > 0 ? join("\n", var.ssh_public_keys) : null
   nameserver      = var.nameserver
   searchdomain    = var.searchdomain
@@ -32,7 +28,7 @@ resource "proxmox_lxc" "this" {
   network {
     name   = "eth0"
     bridge = var.network_bridge
-    tag    = var.network_tag
+    tag    = var.network_tag == null || var.network_tag <= 0 ? null : var.network_tag
     ip     = var.network_mode == "dhcp" ? "dhcp" : var.network_ip_cidr
     gw     = var.network_mode == "dhcp" ? null : var.network_gateway
   }

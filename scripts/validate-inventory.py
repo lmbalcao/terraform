@@ -486,13 +486,15 @@ def validate_ct_workload(
             expect_type(features["nesting"], bool, f"{context}.lxc.features.nesting", errors)
     if "features_manual" in lxc:
         features_manual = require_mapping(lxc["features_manual"], f"{context}.lxc.features_manual", errors)
-        for key in ("keyctl", "fuse", "create"):
+        for key in ("keyctl", "fuse"):
             if key in features_manual and features_manual[key] is not None:
                 expect_type(features_manual[key], bool, f"{context}.lxc.features_manual.{key}", errors)
         if "mount" in features_manual and features_manual["mount"] is not None:
             expect_type(features_manual["mount"], str, f"{context}.lxc.features_manual.mount", errors)
     if "mounts" in lxc:
-        require_list(lxc["mounts"], f"{context}.lxc.mounts", errors)
+        mounts = require_list(lxc["mounts"], f"{context}.lxc.mounts", errors)
+        if mounts:
+            append_error(errors, f"{context}.lxc.mounts", "non-empty mounts are not yet supported in stacks/proxmox-base")
 
 
 def validate_vm_workload(

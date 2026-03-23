@@ -1,6 +1,4 @@
 version: 1
 nodes:
-  2core:
-    role: compute
-  6core:
+  pve:
     role: compute

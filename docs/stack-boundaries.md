@@ -9,12 +9,12 @@ Responsabilidades:
 - criar CTs e VMs no Proxmox
 - publicar outputs estaveis consumiveis por stacks externos
 - escrever notas Proxmox derivadas de `services[*].traefik_*` para workloads expostos via Traefik
-- reconciliar `lxc.features_manual` (`keyctl`, `fuse`, `mount`, `create`) apos a criacao dos CTs
+- reconciliar `lxc.features.nesting` e `lxc.features_manual` (`keyctl`, `fuse`, `mount`) apos a criacao dos CTs
 
 Nao faz:
 
 - `remote-exec`
-- `local-exec` arbitrario ou generico fora da reconciliacao controlada de `lxc.features_manual`
+- `local-exec` arbitrario ou generico fora da reconciliacao controlada de features/config pos-criacao dos CTs
 - bootstrap Docker
 - deploy de apps
 - triggers Rundeck

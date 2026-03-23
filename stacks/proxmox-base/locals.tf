@@ -131,15 +131,14 @@ locals {
 
   cts_with_manual_features = {
     for name, ct in local.cts : name => {
-      keyctl = try(ct.lxc.features_manual.keyctl, false)
-      fuse   = try(ct.lxc.features_manual.fuse, false)
-      mount  = try(trimspace(ct.lxc.features_manual.mount), "")
-      create = try(ct.lxc.features_manual.create, false)
+      nesting     = try(ct.lxc.features.nesting, true)
+      keyctl      = try(ct.lxc.features_manual.keyctl, false)
+      fuse        = try(ct.lxc.features_manual.fuse, false)
+      mount       = try(trimspace(ct.lxc.features_manual.mount), "")
+      description = try(local.ct_descriptions[name], "") == null ? "" : local.ct_descriptions[name]
+      nameserver  = try(length(ct.network.dns_servers) > 0 ? ct.network.dns_servers[0] : "", "")
+      searchdomain = try(ct.network.dns_domain, "") == null ? "" : ct.network.dns_domain
     }
-    if try(ct.lxc.features_manual.keyctl, false)
-    || try(ct.lxc.features_manual.fuse, false)
-    || try(trimspace(ct.lxc.features_manual.mount), "") != ""
-    || try(ct.lxc.features_manual.create, false)
   }
 
   vm_invalid_static_networks = [

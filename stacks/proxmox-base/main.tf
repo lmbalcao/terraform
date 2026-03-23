@@ -88,13 +88,16 @@ resource "terraform_data" "ct_manual_features" {
   for_each = local.cts_with_manual_features
 
   input = {
-    ct_name = each.key
-    node    = module.cts[each.key].target_node
-    vmid    = module.cts[each.key].vmid
-    keyctl  = each.value.keyctl
-    fuse    = each.value.fuse
-    mount   = each.value.mount
-    create  = each.value.create
+    ct_name      = each.key
+    node         = module.cts[each.key].target_node
+    vmid         = module.cts[each.key].vmid
+    nesting      = each.value.nesting
+    keyctl       = each.value.keyctl
+    fuse         = each.value.fuse
+    mount        = each.value.mount
+    description  = each.value.description
+    nameserver   = each.value.nameserver
+    searchdomain = each.value.searchdomain
   }
 
   triggers_replace = [
@@ -110,10 +113,13 @@ resource "terraform_data" "ct_manual_features" {
       module.cts[each.key].target_node,
       "--vmid",
       tostring(module.cts[each.key].vmid),
+      each.value.nesting ? "--nesting" : "",
       each.value.keyctl ? "--keyctl" : "",
       each.value.fuse ? "--fuse" : "",
-      each.value.create ? "--create" : "",
       each.value.mount != "" ? format("--mount %s", jsonencode(each.value.mount)) : "",
+      each.value.description != "" ? format("--description %s", jsonencode(each.value.description)) : "--delete-description",
+      each.value.nameserver != "" ? format("--nameserver %s", jsonencode(each.value.nameserver)) : "--delete-nameserver",
+      each.value.searchdomain != "" ? format("--searchdomain %s", jsonencode(each.value.searchdomain)) : "--delete-searchdomain",
     ]))
     interpreter = ["/bin/bash", "-lc"]
     environment = {

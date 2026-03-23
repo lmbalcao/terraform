@@ -3,7 +3,7 @@ kind: vm
 enabled: false
 vmid: 1780
 name: vm-template
-node: 6core
+node: pve
 tags: []
 network:
   segment: vlan-17

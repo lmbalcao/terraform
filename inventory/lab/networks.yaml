@@ -1,5 +1,12 @@
 version: 1
 networks:
+  vlan-99:
+    vlan: 0
+    bridge: vmbr0
+    cidr: 192.168.9.0/24
+    gateway: 192.168.9.1
+    dns_servers: []
+    dns_domain: lbtec.org
   servicos-externos:
     vlan: 60
     bridge: vmbr0

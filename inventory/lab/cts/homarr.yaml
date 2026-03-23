@@ -4,24 +4,22 @@ enabled: true
 vmid: 6011
 name: homarr
 hostname: homarr
-node: 2core
+node: pve
 tags:
   - 60-servicos-externos
 network:
-  segment: servicos-externos
-  mode: static
-  address: 192.168.60.11/24
-  gateway: 192.168.60.1
+  segment: vlan-99
+  mode: dhcp
 resources:
-  cpu_cores: 2
-  memory_mb: 2048
-  swap_mb: 1024
+  cpu_cores: 1
+  memory_mb: 512
+  swap_mb: 0
 boot:
   on_boot: true
   start: true
 storage:
-  rootfs_storage: local
-  rootfs_size_gb: 8
+  rootfs_storage: local-lvm
+  rootfs_size_gb: 4
 lxc:
   unprivileged: true
   features:
