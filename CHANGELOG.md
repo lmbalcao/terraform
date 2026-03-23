@@ -58,7 +58,7 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.0.9] - 2026-03-23
+## [v2.0.10] - 2026-03-23
 
-- Add CT feature reconciliation and OpenWrt firewall checks
+- Fix Proxmox CT post-create reconciliation
 
