@@ -2,80 +2,73 @@
 
 ## `stacks/proxmox-base`
 
-Responsabilidades:
+Responsabilidades reais:
 
-- ler inventario YAML
-- validar schema, referencias de node e rede, e unicidade de `vmid`
-- criar CTs e VMs no Proxmox
-- publicar outputs estaveis consumiveis por stacks externos
-- escrever notas Proxmox derivadas de `services[*].traefik_*` para workloads expostos via Traefik
-- reconciliar `lxc.features.nesting` e `lxc.features_manual` (`keyctl`, `fuse`, `mount`) apos a criacao dos CTs
+- ler `defaults.yaml`, `nodes.yaml`, `networks.yaml`, `cts/*.yaml` e `vms/*.yaml`
+- validar `version`, `vmid`, `node`, `segment` e redes staticas
+- criar CTs com `module.cts -> proxmox_lxc`
+- criar VMs com `module.vms -> proxmox_vm_qemu`
+- expor outputs consumiveis por stacks externos
+- gerar notes/description Proxmox quando um workload tem `services[]` com `traefik_tag`, `traefik_label`, `uri` e `port`
+- reconciliar pos-criacao de CT para:
+  - `nesting`
+  - `keyctl`
+  - `fuse`
+  - `description`
+  - `nameserver`
+  - `searchdomain`
 
-Nao faz:
+Limites reais:
 
-- `remote-exec`
-- `local-exec` arbitrario ou generico fora da reconciliacao controlada de features/config pos-criacao dos CTs
-- bootstrap Docker
-- deploy de apps
-- triggers Rundeck
-- restores Restic
-- configuracao pos-provisionamento detalhada
-- criar registos DNS no OpenWrt
+- `mounts` nao estao suportados no contrato ativo
+- `features_manual.mount` e rejeitado pelo validador
+- nao faz bootstrap aplicacional
+- nao faz DNS OpenWrt
+- nao faz configuracao Ansible
+- nao faz politicas PBS
 
 ## `stacks/openwrt-dns`
 
-Responsabilidades:
+Responsabilidades reais:
 
-- consumir `ingress.yaml` e os workloads publicados no inventario
-- resolver `uri -> traefik_tag -> address`
-- garantir no OpenWrt os hostnames que apontam para a instancia Traefik correta
-- falhar cedo se um `uri` referenciar uma instancia inexistente ou se o mesmo `uri` apontar para tags diferentes
+- ler workloads e `ingress.yaml`
+- derivar `uri -> traefik_tag -> address`
+- criar `openwrt_dhcp_domain.records` quando existirem serviços validos
+- reconciliar regras agregadas de firewall com `terraform_data.firewall_rules` e `scripts/ensure-openwrt-firewall.py`
 
-Nao faz:
+Limites reais:
 
-- criar CTs ou VMs
-- gerar labels Traefik
-- inferir IPs de entrada sem `ingress.yaml`
-- esconder alteracoes DNS dentro do stack base
+- nao cria CTs nem VMs
+- nao inventa `traefik_instances`
+- depende de `ingress.yaml` e `services[]`
+- o provider oficial entra no `plan`, mas no host OpenWrt real deste workspace falha em LuCI RPC porque espera `/cgi-bin/luci/rpc/auth` e esse endpoint devolve `404`
 
 ## `stacks/ansible`
 
-Responsabilidades:
+Estado real:
 
-- consumir targets e metadados produzidos pelo core
-- transformar isso em inventario ou entradas para configuracao
-- representar apenas a integracao, nao o estado completo dos workloads
-
-Nao faz:
-
-- criar CTs ou VMs
-- substituir o inventario principal
-- esconder side effects operacionais dentro do stack base
+- stack minimo
+- filtra `targets` com `ansible_enabled=true`
+- nao aplica configuracao externa
 
 ## `stacks/pbs`
 
-Responsabilidades:
+Estado real:
 
-- consumir workloads e politicas de backup declaradas
-- modelar inclusao de CTs e VMs em politicas de backup
-- manter o tema backup no dominio da infraestrutura
-
-Nao faz:
-
-- restore imperativo durante `apply`
-- scripts ad hoc por workload
-- dependencia em naming legacy ou tags opacas sem schema
+- stack minimo
+- filtra `targets` com `backup_policy` preenchida
+- nao aplica politicas PBS externas
 
 ## Contratos Entre Stacks
 
-`proxmox-base` deve expor pelo menos:
+`proxmox-base` exporta:
 
+- `inventory_summary`
 - `created_cts`
 - `created_vms`
 - `ansible_targets`
 - `pbs_targets`
-- `inventory_summary`
 
-`openwrt-dns` consome apenas inventario e `ingress.yaml`; nao deve depender da estrutura interna do stack base para resolver hostnames.
+`ansible` e `pbs` consomem apenas esse contrato.
 
-`ansible` e `pbs` devem consumir os contratos do core sem depender do layout interno do stack base.
+`openwrt-dns` nao depende dos outputs internos do stack base; depende do inventario e de `ingress.yaml`.

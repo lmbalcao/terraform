@@ -1,122 +1,68 @@
 # Migration Runbook
 
-Este runbook define como migrar do root module legacy para a nova arquitetura sem recriacao acidental de recursos.
+Este runbook serve para migrar state do root module legacy para a arquitetura por stacks.
 
-## 1. Preconditions
+## Estado Atual
 
-- Inventario novo preenchido para o ambiente piloto
-- `stacks/proxmox-base` implementado
-- backend remoto e locking decididos
-- politica de segredos decidida
-- `terraform` ou `tofu` disponivel no operador ou CI
-- snapshot do state atual guardado fora do repositorio
-- `env/lab/common.tfvars` e `env/lab/proxmox-base.tfvars` preenchidos fora do git
+- o root module antigo continua arquivado em `legacy/root-module/`
+- o ambiente ativo novo e `dev`
+- `prod` esta apenas preparado estruturalmente
+- nao existe bloco `backend` implementado nos stacks ativos
 
-## 2. Freeze
+## Preconditions
 
-1. Congelar mudanças funcionais no root legacy.
-2. Capturar:
-   - `terraform state pull`
-   - `terraform providers`
-   - `terraform plan`
-   - lockfile atual
-3. Confirmar os identificadores operacionais de cada workload:
-   - `vmid`
-   - `name`
-   - `node`
-   - `ip`
-   - `storage`
-   - `tags`
+- inventario `dev` validado
+- `stacks/proxmox-base` validado
+- snapshot do state legacy guardado fora do repo
+- credenciais reais disponiveis fora do git
+- plano novo revisto antes de qualquer `state mv`
 
-## 3. Paridade de Inventario
+## Ordem Recomendada
 
-1. Converter os workloads de `00-inventory.tf` para `inventory/<env>/`.
-2. Preservar os valores atuais, mesmo quando o desenho novo permita melhorias.
-3. Nao introduzir novos `services`, `backup_policy` ou `bootstrap_profile` sem fonte real.
+1. validar repo e inventario
+2. correr `plan` real do stack novo
+3. fazer backup do state legacy
+4. fazer `state mv` recurso a recurso
+5. repetir `plan`
+6. so depois considerar `apply`
 
-## 4. Validacao Estrutural
+## Comandos Minimos
 
-1. Executar `bash scripts/validate-repo.sh`
-2. Executar `bash scripts/validate-inventory.sh`
-3. Executar validacao Terraform no novo stack:
-   - `terraform -chdir=stacks/proxmox-base init -backend=false`
-   - `terraform -chdir=stacks/proxmox-base validate`
+```bash
+bash scripts/validate-repo.sh
+bash scripts/validate-inventory.sh
+STACK_VARS_FILE=/mnt/data/terraform-lab/tfvars/lab-proxmox-base.tfvars.json \
+bash scripts/plan-stack.sh proxmox-base dev
+```
 
-## 5. Plano Comparativo
-
-1. Gerar `plan` do root legacy.
-2. Gerar `plan` do `stacks/proxmox-base`.
-3. Comparar:
-   - `vmid`
-   - `target_node`
-   - tags
-   - rootfs
-   - network segment e VLAN
-   - argumentos sensiveis do provider Proxmox
-4. Bloquear migracao se o novo stack quiser destruir ou recriar recursos existentes sem razao documentada.
-
-## 6. Migracao de State
-
-Usar primeiro `state mv` quando a origem e o destino representam o mesmo recurso logico.
-
-Exemplos de mapeamento esperado:
-
-- `proxmox_lxc.cts["homarr"]` -> `module.cts["homarr"].proxmox_lxc.this`
-- `proxmox_vm_qemu.vms["vm_template"]` -> `module.vms["vm-template"].proxmox_vm_qemu.this`
-
-Passos:
-
-1. Inicializar o novo stack com backend configurado.
-2. Fazer backup do state antes de qualquer `state mv`.
-3. Migrar um recurso de cada vez.
-4. Executar `plan` apos cada lote pequeno.
-5. Corrigir o inventario antes de continuar se existir drift.
-6. So fazer `state push` depois de rever o state novo e o `plan` resultante.
-
-Script de apoio:
+Helper de apoio para state move:
 
 ```bash
 bash scripts/cutover-lab.sh
 bash scripts/cutover-lab.sh --execute
 ```
 
-## 7. Ambiente Piloto
+O nome do script e legado, mas o fluxo alvo do helper e `dev`.
 
-Ordem recomendada:
+## Mapeamentos Relevantes
 
-1. `lab`
-2. `staging`
-3. `prod`
+- `proxmox_lxc.cts["homarr"]` -> `module.cts["homarr"].proxmox_lxc.this`
+- `proxmox_vm_qemu.vms["vm_template"]` -> `module.vms["vm-template"].proxmox_vm_qemu.this`
 
-Nunca migrar mais de um ambiente ao mesmo tempo.
+## Verificacao Real Ja Feita
 
-## 8. Remocao de Legado
+Em `2026-03-27`, o stack novo `stacks/proxmox-base` foi provado em `dev-terraform-101` com credenciais reais:
 
-So depois de `plan` limpo no novo stack:
+- `plan` com exit code `0`
+- sem warnings
+- `target_node = "dev-proxmox"`
+- `ostemplate = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"`
 
-- remover `modules.tf`
-- remover `templates/`
-- remover `10-restic_deploy.tf`
-- remover `15-docker_setup.tf`
-- remover `20-docker_deploy.tf`
-- remover `30-portainer_endpoints.tf`
-- remover `50-rundeck_deploy.tf`
-- remover `10-validade_backup.tf`
+Isto prova que o stack novo consegue planear o CT `homarr` contra o provider real.
 
-## 9. Rollback
+## Cuidados
 
-Se o novo stack apresentar diferencas inesperadas:
-
-1. parar a migracao
-2. nao executar `apply`
-3. restaurar o state backup se necessario
-4. regressar ao root legacy
-5. documentar a causa antes de nova tentativa
-
-## 10. Blockers Conhecidos Neste Workspace
-
-Neste workspace atual, o binario `terraform` ja foi instalado localmente em `./.tools/bin/terraform`, mas o sandbox ainda bloqueia `init`, `validate` e `plan` com `bwrap: Unknown option --argv0`. Por isso:
-
-- a validacao real de `init`, `validate` e `plan` nao foi concluida aqui
-- a migracao de state nao foi realizada aqui
-- os artefactos novos foram preparados para a fase seguinte, mas precisam de shell local normal ou CI antes de cutover
+- nao usar docs antigas de `lab` como verdade operacional atual
+- nao assumir que `vm-template` esta ativo; o inventario atual tem `enabled: false`
+- nao assumir Traefik/OpenWrt ativos para `homarr`; o inventario atual nao prova isso
+- nao assumir backend remoto ja configurado; essa parte continua fora do codigo ativo

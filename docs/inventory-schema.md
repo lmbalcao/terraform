@@ -1,41 +1,85 @@
 # Inventory Schema
 
-O inventario e a fonte de verdade declarativa da nova arquitetura Terraform.
-Cada ambiente vive em `inventory/<environment>/` e separa:
+O inventario ativo vive em `inventory/<environment>/` e e a fonte declarativa do repo.
 
-- `defaults.yaml`: defaults por tipo
-- `nodes.yaml`: catalogo de nodes Proxmox validos
-- `networks.yaml`: segmentos logicos reutilizaveis
-- `ingress.yaml`: catalogo de instancias Traefik e respetivos IPs de entrada
-- `cts/*.yaml`: um documento por CT
-- `vms/*.yaml`: um documento por VM
+## Estrutura
 
-## Convencoes
+Cada ambiente usa:
 
-- YAML versionado com `version: 1`
-- Um workload por ficheiro
-- O nome do ficheiro deve coincidir com `name`
-- Campos em `snake_case`
-- `vmid` explicito e obrigatorio
-- `network.segment` referencia um segmento definido em `networks.yaml`
-- `network.mode` e sempre explicito: `static` ou `dhcp`
-- `services` descreve intencao de exposicao, nao labels raw de reverse proxy
-- `operations` e sempre opt-in; nao existem defaults implicitos que disparem efeitos laterais
-- quando um servico declara `traefik_tag`, `traefik_label` e `uri`, o hostname tem de ser resolvivel no OpenWrt para o IP da instancia Traefik referenciada
+- `defaults.yaml`
+- `nodes.yaml`
+- `networks.yaml`
+- `ingress.yaml`
+- `cts/*.yaml`
+- `vms/*.yaml`
 
-## Estrutura Agregada
+## Regras Gerais
+
+- todos os documentos usam `version: 1`
+- um workload por ficheiro
+- o nome do ficheiro deve coincidir com `name`
+- `kind` tem de corresponder a `ct` ou `vm`
+- `vmid` e obrigatorio
+- `node` tem de existir em `nodes.yaml`
+- `network.segment` tem de existir em `networks.yaml`
+- `network.mode` tem de ser `dhcp` ou `static`
+- em `static`, `address` e `gateway` sao obrigatorios
+- `services[]` e declarativo; nao substitui labels raw em Terraform
+
+## Exemplo De `nodes.yaml`
+
+Estado real em `dev`:
 
 ```yaml
 version: 1
-defaults: {}
-nodes: {}
-networks: {}
-ingress: {}
-cts: {}
-vms: {}
+nodes:
+  dev-proxmox:
+    role: compute
 ```
 
-## defaults.yaml
+## Exemplo De `networks.yaml`
+
+Estado real em `dev`:
+
+```yaml
+version: 1
+networks:
+  vlan-99:
+    bridge: vmbr0
+    cidr: 192.168.99.0/24
+    gateway: 192.168.99.1
+    dns_servers: []
+    dns_domain: lbtec.org
+  servicos-externos:
+    bridge: vmbr0
+    cidr: 192.168.99.0/24
+    gateway: 192.168.99.1
+    dns_servers:
+      - 192.168.99.1
+    dns_domain: lbtec.org
+  vlan-17:
+    bridge: vmbr0
+    cidr: 192.168.99.0/24
+    gateway: 192.168.99.1
+    dns_servers:
+      - 192.168.99.1
+    dns_domain: lbtec.org
+```
+
+## Exemplo De `ingress.yaml`
+
+Estado real em `dev`:
+
+```yaml
+version: 1
+traefik_instances: {}
+```
+
+Se forem usados serviços Traefik, cada `traefik_tag` tem de existir aqui.
+
+## `defaults.yaml`
+
+Exemplo coerente com o contrato atual:
 
 ```yaml
 version: 1
@@ -72,58 +116,17 @@ defaults:
       disks: []
 ```
 
-## nodes.yaml
-
-```yaml
-version: 1
-nodes:
-  2core:
-    role: compute
-  6core:
-    role: compute
-```
-
-## networks.yaml
-
-```yaml
-version: 1
-networks:
-  servicos-externos:
-    vlan: 60
-    bridge: vmbr0
-    cidr: 192.168.60.0/24
-    gateway: 192.168.60.1
-    dns_servers:
-      - 192.168.60.1
-    dns_domain: lbtec.org
-```
-
-## ingress.yaml
-
-```yaml
-version: 1
-traefik_instances:
-  traefik-int:
-    address: 192.168.40.50
-```
-
-Regras:
-
-- `traefik_instances.<tag>.address` e o IP para o qual o OpenWrt deve resolver os hostnames publicados por essa instancia
-- um mesmo `uri` nao pode apontar para duas instancias Traefik diferentes
-- `ingress.yaml` e o catalogo de entrada; o workload apenas referencia `traefik_tag`
-
 ## Campos Comuns
 
-Todos os workloads usam os seguintes campos:
+Workloads usam normalmente:
 
 - `version`
 - `kind`
 - `enabled`
 - `vmid`
 - `name`
+- `hostname` para CT
 - `node`
-- `notes_title`
 - `tags`
 - `network`
 - `resources`
@@ -132,115 +135,27 @@ Todos os workloads usam os seguintes campos:
 - `services`
 - `operations`
 
-### network
+### `network`
+
+Exemplo `dhcp`:
 
 ```yaml
 network:
-  segment: servicos-externos
+  segment: vlan-99
+  mode: dhcp
+```
+
+Exemplo `static`:
+
+```yaml
+network:
+  segment: vlan-17
   mode: static
-  address: 192.168.60.11/24
-  gateway: 192.168.60.1
-  dns_servers:
-    - 192.168.60.1
-  dns_domain: lbtec.org
-  bridge: vmbr0
+  address: 192.168.99.80/24
+  gateway: 192.168.99.1
 ```
 
-Regras:
-
-- `segment` tem de existir em `networks.yaml`
-- `address` e `gateway` sao obrigatorios quando `mode: static`
-- `bridge` pode vir do segmento ou do proprio workload
-
-### resources
-
-```yaml
-resources:
-  cpu_cores: 2
-  memory_mb: 2048
-```
-
-Para CT:
-
-```yaml
-resources:
-  cpu_cores: 2
-  memory_mb: 2048
-  swap_mb: 1024
-```
-
-Para VM:
-
-```yaml
-resources:
-  cpu_cores: 2
-  cpu_sockets: 1
-  memory_mb: 2048
-```
-
-### boot
-
-Para CT:
-
-```yaml
-boot:
-  on_boot: true
-  start: true
-```
-
-Para VM:
-
-```yaml
-boot:
-  on_boot: true
-  start_state: running
-```
-
-### storage
-
-```yaml
-storage:
-  rootfs_storage: local
-  rootfs_size_gb: 8
-```
-
-### services
-
-`services` descreve metadados consumiveis por stacks externos. Um workload pode expor varios endpoints; cada entrada representa uma porta/hostname publicado.
-
-Quando `traefik_tag`, `traefik_label` e `uri` existem, o fluxo faz duas coisas:
-
-- `stacks/proxmox-base` gera automaticamente notas Proxmox no formato esperado pela instancia Traefik referenciada
-- `stacks/openwrt-dns` garante no OpenWrt que o `uri` resolve para o IP definido em `ingress.yaml` para esse `traefik_tag`
-
-```yaml
-services:
-  - name: homarr
-    port: 7575
-    scheme: http
-    traefik_tag: traefik-int
-    traefik_label: homarr
-    uri: homarr.lbtec.org
-    proxy:
-      enabled: true
-      host: homarr.lbtec.org
-      entrypoint: websecure
-      tls: true
-  - name: homarr-api
-    port: 8080
-    scheme: http
-    traefik_tag: traefik-int
-    traefik_label: homarr-api
-    uri: homarr-api.lbtec.org
-```
-
-Regras:
-
-- `traefik_tag`, `traefik_label` e `uri` sao obrigatorios em conjunto
-- `traefik_tag` tem de existir em `ingress.yaml`
-- um mesmo `uri` nao pode ser usado por tags Traefik diferentes
-
-### operations
+### `operations`
 
 ```yaml
 operations:
@@ -249,123 +164,44 @@ operations:
   bootstrap_profile: null
 ```
 
-Exemplo com notas Traefik geradas:
+Hoje este bloco so alimenta handoff minimo para os stacks `ansible` e `pbs`.
 
-```yaml
-version: 1
-kind: ct
-enabled: true
-vmid: 6020
-name: pbs
-hostname: pbs
-notes_title: Proxmox Backup Server
-node: 2core
-tags:
-  - 60-servicos-externos
-network:
-  segment: servicos-externos
-  mode: static
-  address: 192.168.60.20/24
-  gateway: 192.168.60.1
-resources:
-  cpu_cores: 2
-  memory_mb: 4096
-  swap_mb: 1024
-boot:
-  on_boot: true
-  start: true
-storage:
-  rootfs_storage: local
-  rootfs_size_gb: 8
-lxc:
-  template: local:vztmpl/debian-13-standard_amd64.tar.zst
-  unprivileged: true
-  features:
-    nesting: true
-  mounts: []
-services:
-  - name: pbs
-    scheme: https
-    port: 8007
-    traefik_tag: traefik-int
-    traefik_label: pbs
-    uri: pbs.lbtec.org
-operations:
-  ansible_enabled: false
-  backup_policy: null
-  bootstrap_profile: null
-```
-
-Com este `ingress.yaml`:
-
-```yaml
-version: 1
-traefik_instances:
-  traefik-int:
-    address: 192.168.40.50
-```
-
-Notas Proxmox geradas para esse CT:
-
-```text
-Proxmox Backup Server
-
-traefik-int.enable=true
-
-traefik-int.http.routers.pbs.rule=Host(`pbs.lbtec.org`)
-
-traefik-int.http.routers.pbs.entrypoints=websecure
-
-traefik-int.http.routers.pbs.middlewares=compression@file
-
-traefik-int.http.routers.pbs.tls=true
-
-traefik-int.http.routers.pbs.tls.certresolver=le
-
-traefik-int.http.services.pbs.loadbalancer.server.port=8007
-```
-
-Entrada DNS que o `openwrt-dns` deve garantir:
-
-```text
-pbs.lbtec.org -> 192.168.40.50
-```
-
-`operations` nao substitui Terraform state nem serve para disparar `remote-exec` arbitrario.
-
-## Campos Especificos de CT
+## Campos Especificos De CT
 
 ```yaml
 lxc:
-  template: local:vztmpl/debian-13-standard_amd64.tar.zst
+  template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
   unprivileged: true
   features:
     nesting: true
   features_manual:
     keyctl: false
     fuse: false
-    mount: ""
   mounts: []
 ```
 
-Regras adicionais para CTs:
+Regras reais:
 
-- `lxc.features.nesting`, `lxc.features_manual.keyctl`, `fuse` e `mount` sao reconciliadas apos a criacao do CT
-- `features_manual` existe para manter compatibilidade com templates e comportamento legacy sem alterar o tratamento direto de `nesting`
-- `lxc.mounts` permanece reservado; valores nao vazios sao rejeitados ate existir mapeamento estavel para `mountpoint` no stack
+- `lxc.template` deve existir no inventario ou vir de fallback valido
+- `lxc.features.nesting` entra no contrato do CT
+- `features_manual.keyctl` e `features_manual.fuse` sao reconciliados apos criacao
+- `features_manual.mount` nao e suportado
+- `lxc.mounts` tem de ser lista vazia no contrato atual
+- no contexto de teste atual, o inventario ativo nao declara `vlan`; o stack passa `null` para `network_tag`
 
-## Campos Especificos de VM
+## Campos Especificos De VM
 
 ```yaml
 qemu:
   sockets: 1
   agent_enabled: false
-  source:
-    clone: debian-12-template
+  source: {}
   disks: []
 ```
 
-## Exemplo Completo de CT
+## Exemplo Real De CT Em `dev`
+
+`inventory/dev/cts/homarr.yaml`:
 
 ```yaml
 version: 1
@@ -374,32 +210,27 @@ enabled: true
 vmid: 6011
 name: homarr
 hostname: homarr
-node: 2core
+node: dev-proxmox
 tags:
   - 60-servicos-externos
 network:
-  segment: servicos-externos
-  mode: static
-  address: 192.168.60.11/24
-  gateway: 192.168.60.1
+  segment: vlan-99
+  mode: dhcp
 resources:
-  cpu_cores: 2
-  memory_mb: 2048
+  cpu_cores: 1
+  memory_mb: 1024
   swap_mb: 1024
 boot:
   on_boot: true
   start: true
 storage:
-  rootfs_storage: local
+  rootfs_storage: local-lvm
   rootfs_size_gb: 8
 lxc:
+  template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
   unprivileged: true
   features:
     nesting: true
-  features_manual:
-    keyctl: false
-    fuse: false
-    mount: ""
   mounts: []
 services: []
 operations:
@@ -408,7 +239,9 @@ operations:
   bootstrap_profile: null
 ```
 
-## Exemplo Completo de VM
+## Exemplo Real De VM Em `dev`
+
+`inventory/dev/vms/vm-template.yaml`:
 
 ```yaml
 version: 1
@@ -416,23 +249,23 @@ kind: vm
 enabled: false
 vmid: 1780
 name: vm-template
-node: 6core
+node: dev-proxmox
 tags: []
 network:
   segment: vlan-17
   mode: static
-  address: 192.168.17.80/24
-  gateway: 192.168.17.1
+  address: 192.168.99.80/24
+  gateway: 192.168.99.1
 resources:
   cpu_cores: 2
   cpu_sockets: 1
-  memory_mb: 2048
+  memory_mb: 1024
 boot:
   on_boot: true
   start_state: running
 storage:
   rootfs_storage: local
-  rootfs_size_gb: 20
+  rootfs_size_gb: 8
 qemu:
   sockets: 1
   agent_enabled: false
@@ -445,16 +278,36 @@ operations:
   bootstrap_profile: null
 ```
 
+## Services E Traefik
+
+Quando um serviço tiver simultaneamente:
+
+- `traefik_tag`
+- `traefik_label`
+- `uri`
+- `port`
+
+entao:
+
+- `proxmox-base` gera notes Proxmox para esse workload
+- `openwrt-dns` tenta publicar o hostname no OpenWrt
+
+No estado atual de `dev`, `homarr` tem `services: []` e `ingress.yaml` esta vazio. Portanto nao existe prova atual de notes Traefik ou DNS OpenWrt ativos para esse workload.
+
+No perfil de teste atual:
+
+- CTs e VMs no inventario usam `1 GB RAM`
+- o CT ativo usa `1024 swap`
+- os discos foram reduzidos para o minimo pratico de testes no contexto atual
+- o stack de VM nao modela `swap`; por isso essa parte nao fica declarada nem aplicada para VMs
+
 ## Validacoes Minimas
 
 - unicidade de `vmid` entre CTs e VMs
-- unicidade de `name` dentro de cada tipo
-- ficheiro `<name>.yaml` coerente com `name`
+- unicidade de `name` por tipo
 - `node` valido
 - `network.segment` valido
-- `address` e `gateway` obrigatorios em `static`
-- `kind` coerente com a diretoria `cts` ou `vms`
-- `traefik_tag`, `traefik_label` e `uri` coerentes entre si
-- `traefik_tag` existente em `ingress.yaml`
-- `uri` nao conflituoso entre instancias Traefik
-- campos desconhecidos devem ser revistos antes de entrarem no schema operativo
+- completude de redes staticas
+- coerencia de `traefik_tag` com `ingress.yaml`
+- rejeicao de `features_manual.mount` preenchido
+- rejeicao de `lxc.mounts` nao vazio

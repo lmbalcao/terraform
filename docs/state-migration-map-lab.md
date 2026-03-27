@@ -1,53 +1,49 @@
-# Lab State Migration Map
+# Historical Lab State Migration Map
 
-Este ficheiro fixa o mapeamento esperado entre o runtime legacy no root e o novo stack `stacks/proxmox-base` para o ambiente `lab`.
+Este ficheiro e historico.
 
-## Recursos Identificados
+O nome foi mantido porque o helper `scripts/cutover-lab.sh` e o state legacy ainda usam naming `lab`, mas este documento nao descreve a realidade operacional atual do inventario ativo.
 
-### CTs
+## O Que Continua Util
 
-- legacy: `proxmox_lxc.cts["homarr"]`
-- novo: `module.cts["homarr"].proxmox_lxc.this`
+Mapeamentos de enderecos de state:
+
+- `proxmox_lxc.cts["homarr"]` -> `module.cts["homarr"].proxmox_lxc.this`
+- `proxmox_vm_qemu.vms["vm_template"]` -> `module.vms["vm-template"].proxmox_vm_qemu.this`
+
+## O Que Nao Deve Ser Tratado Como Verdade Atual
+
+Valores antigos de:
+
+- node legacy
+- enderecos IP antigos
+- segmentacao antiga
+- naming `lab` como ambiente ativo
+
+Esses valores foram ultrapassados pelo inventario ativo em `inventory/dev/`.
+
+## Valores Ativos Verificados Hoje
+
+### CT `homarr`
+
 - `vmid`: `6011`
-- `node`: `2core`
-- `address`: `192.168.60.11/24`
+- `node`: `dev-proxmox`
+- `network.segment`: `vlan-99`
+- `network.mode`: `dhcp`
+- `lxc.template`: `local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst`
 
-### VMs
+### VM `vm-template`
 
-- legacy: `proxmox_vm_qemu.vms["vm_template"]`
-- novo: `module.vms["vm-template"].proxmox_vm_qemu.this`
 - `vmid`: `1780`
-- `node`: `6core`
-- `address`: `192.168.17.80/24`
+- `node`: `dev-proxmox`
+- `enabled`: `false`
+- `network.address`: `192.168.17.80/24`
 
-## Fluxo Recomendado
+## Uso Correto Deste Documento
 
-1. Fazer `state pull` do root legacy.
-2. Fazer backup do state antes de qualquer alteracao.
-3. Inicializar `stacks/proxmox-base` com o backend final.
-4. Migrar os recursos do ficheiro de state legacy para o state do stack novo.
-5. Executar `plan` no novo stack e bloquear se existir `destroy` ou `replace` nao planeado.
+Usar apenas para:
 
-## Exemplo com ficheiros de state locais
+- perceber como o legacy state se mapeia para os novos enderecos Terraform
+- apoiar `state mv` durante migracao manual
 
-```bash
-terraform -chdir=. state pull > /tmp/legacy.tfstate
-terraform -chdir=stacks/proxmox-base state pull > /tmp/proxmox-base.tfstate
-
-terraform state mv   -state=/tmp/legacy.tfstate   -state-out=/tmp/proxmox-base.tfstate   "proxmox_lxc.cts[\"homarr\"]"   "module.cts[\"homarr\"].proxmox_lxc.this"
-
-terraform state mv   -state=/tmp/legacy.tfstate   -state-out=/tmp/proxmox-base.tfstate   "proxmox_vm_qemu.vms[\"vm_template\"]"   "module.vms[\"vm-template\"].proxmox_vm_qemu.this"
-```
-
-Depois destes movimentos, validar ambos os ficheiros de state e fazer `state push` apenas se o `plan` do stack novo estiver limpo ou com diferencas aprovadas.
-
-## Cuidado Especifico
-
-O identificador legacy da VM e `vm_template`, mas o identificador novo e `vm-template`. A migracao de state tem de respeitar essa mudanca de chave para evitar importacoes redundantes ou recursos duplicados.
-
-## Shortcut
-
-```bash
-bash scripts/cutover-lab.sh
-bash scripts/cutover-lab.sh --execute
-```
+Nao usar este ficheiro como fonte para reconstruir inventario novo.
