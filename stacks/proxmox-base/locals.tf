@@ -129,12 +129,13 @@ locals {
     if ct.network.mode == "static" && (try(ct.network.address, null) == null || try(ct.network.gateway, null) == null)
   ]
 
+  # Manual reconciliation stays explicit until the active CT contract can
+  # prove these fields end-to-end through native Terraform resources.
   cts_with_manual_features = {
     for name, ct in local.cts : name => {
       nesting      = try(ct.lxc.features.nesting, true)
       keyctl       = try(ct.lxc.features_manual.keyctl, false)
       fuse         = try(ct.lxc.features_manual.fuse, false)
-      mount        = try(trimspace(ct.lxc.features_manual.mount), "")
       description  = try(local.ct_descriptions[name], "") == null ? "" : local.ct_descriptions[name]
       nameserver   = try(length(ct.network.dns_servers) > 0 ? ct.network.dns_servers[0] : "", "")
       searchdomain = try(ct.network.dns_domain, "") == null ? "" : ct.network.dns_domain

@@ -52,7 +52,9 @@ variable "network_bridge" {
 
 variable "network_tag" {
   type        = number
-  description = "VLAN tag."
+  default     = null
+  nullable    = true
+  description = "Optional VLAN tag."
 }
 
 variable "network_address" {

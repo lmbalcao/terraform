@@ -49,6 +49,17 @@ check "static_networks_complete" {
   }
 }
 
+check "proxmox_credentials_declared" {
+  assert {
+    condition = alltrue([
+      trimspace(var.proxmox_api_url) != "",
+      trimspace(var.proxmox_api_token_id) != "",
+      trimspace(var.proxmox_api_token) != "",
+    ])
+    error_message = "proxmox-base requires declared Proxmox credentials. Without valid Proxmox credentials, terraform plan cannot validate provider-backed behavior for this stack."
+  }
+}
+
 module "cts" {
   for_each = local.cts
   source   = "../../modules/proxmox-ct"
@@ -77,15 +88,17 @@ module "cts" {
   rootfs_size_gb = each.value.storage.rootfs_size_gb
 
   network_bridge  = each.value.network.bridge
-  network_tag     = each.value.network.vlan
+  network_tag     = try(each.value.network.vlan, null)
   network_mode    = each.value.network.mode
   network_ip_cidr = try(each.value.network.address, null)
   network_gateway = try(each.value.network.gateway, null)
-  features        = try(each.value.lxc.features, {})
 }
 
 resource "terraform_data" "ct_manual_features" {
   for_each = local.cts_with_manual_features
+
+  # The active CT contract still reconciles nesting/keyctl/fuse and selected
+  # config fields after creation via the Proxmox API or local pct.
 
   input = {
     ct_name      = each.key
@@ -94,7 +107,6 @@ resource "terraform_data" "ct_manual_features" {
     nesting      = each.value.nesting
     keyctl       = each.value.keyctl
     fuse         = each.value.fuse
-    mount        = each.value.mount
     description  = each.value.description
     nameserver   = each.value.nameserver
     searchdomain = each.value.searchdomain
@@ -107,58 +119,53 @@ resource "terraform_data" "ct_manual_features" {
 
   provisioner "local-exec" {
     command     = <<-EOT
-      args=(
-        python3
-        ${path.root}/../../scripts/apply-proxmox-ct-features.py
-        --node "$CT_NODE"
+      set -- \
+        python3 \
+        ${path.root}/../../scripts/apply-proxmox-ct-features.py \
+        --node "$CT_NODE" \
         --vmid "$CT_VMID"
-      )
 
       if [ "$CT_NESTING" = "1" ]; then
-        args+=(--nesting)
+        set -- "$@" --nesting
       fi
       if [ "$CT_KEYCTL" = "1" ]; then
-        args+=(--keyctl)
+        set -- "$@" --keyctl
       fi
       if [ "$CT_FUSE" = "1" ]; then
-        args+=(--fuse)
-      fi
-      if [ -n "$CT_MOUNT" ]; then
-        args+=(--mount "$CT_MOUNT")
+        set -- "$@" --fuse
       fi
       if [ -n "$CT_DESCRIPTION" ]; then
-        args+=(--description "$CT_DESCRIPTION")
+        set -- "$@" --description "$CT_DESCRIPTION"
       else
-        args+=(--delete-description)
+        set -- "$@" --delete-description
       fi
       if [ -n "$CT_NAMESERVER" ]; then
-        args+=(--nameserver "$CT_NAMESERVER")
+        set -- "$@" --nameserver "$CT_NAMESERVER"
       else
-        args+=(--delete-nameserver)
+        set -- "$@" --delete-nameserver
       fi
       if [ -n "$CT_SEARCHDOMAIN" ]; then
-        args+=(--searchdomain "$CT_SEARCHDOMAIN")
+        set -- "$@" --searchdomain "$CT_SEARCHDOMAIN"
       else
-        args+=(--delete-searchdomain)
+        set -- "$@" --delete-searchdomain
       fi
 
-      "$${args[@]}"
+      exec "$@"
     EOT
-    interpreter = ["/bin/bash", "-lc"]
+    interpreter = ["/bin/sh", "-c"]
     environment = {
       CT_NODE                  = module.cts[each.key].target_node
       CT_VMID                  = tostring(module.cts[each.key].vmid)
       CT_NESTING               = each.value.nesting ? "1" : "0"
       CT_KEYCTL                = each.value.keyctl ? "1" : "0"
       CT_FUSE                  = each.value.fuse ? "1" : "0"
-      CT_MOUNT                 = each.value.mount
       CT_DESCRIPTION           = each.value.description
       CT_NAMESERVER            = each.value.nameserver
       CT_SEARCHDOMAIN          = each.value.searchdomain
       PROXMOX_API_URL          = var.proxmox_api_url
       PROXMOX_API_TOKEN_ID     = var.proxmox_api_token_id
       PROXMOX_API_TOKEN_SECRET = var.proxmox_api_token
-      PROXMOX_TLS_INSECURE     = "true"
+      PROXMOX_TLS_INSECURE     = tostring(var.proxmox_tls_insecure)
     }
   }
 }
@@ -180,7 +187,7 @@ module "vms" {
   vm_state           = each.value.boot.start_state
 
   network_bridge  = each.value.network.bridge
-  network_tag     = each.value.network.vlan
+  network_tag     = try(each.value.network.vlan, null)
   network_address = try(each.value.network.address, null)
 
   rootfs_storage = each.value.storage.rootfs_storage

@@ -491,6 +491,12 @@ def validate_ct_workload(
                 expect_type(features_manual[key], bool, f"{context}.lxc.features_manual.{key}", errors)
         if "mount" in features_manual and features_manual["mount"] is not None:
             expect_type(features_manual["mount"], str, f"{context}.lxc.features_manual.mount", errors)
+            if str(features_manual["mount"]).strip():
+                append_error(
+                    errors,
+                    f"{context}.lxc.features_manual.mount",
+                    "manual mount reconciliation is not supported in stacks/proxmox-base",
+                )
     if "mounts" in lxc:
         mounts = require_list(lxc["mounts"], f"{context}.lxc.mounts", errors)
         if mounts:

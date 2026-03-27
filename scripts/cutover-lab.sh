@@ -35,12 +35,13 @@ usage() {
   cat <<EOF
 Usage: scripts/cutover-lab.sh [--execute]
 
-Without --execute, prints the exact cutover sequence for lab.
+Legacy script name retained for compatibility.
+Without --execute, prints the exact cutover sequence for dev using the archived legacy state as the source.
 With --execute, runs validation and the offline state move steps using /tmp state files.
 
 Required local files before --execute:
-  env/lab/common.tfvars
-  env/lab/proxmox-base.tfvars
+  env/dev/common.tfvars
+  env/dev/proxmox-base.tfvars
 EOF
 }
 
@@ -61,10 +62,10 @@ case "${1:-}" in
 esac
 
 STACK_DIR="$ROOT_DIR/stacks/proxmox-base"
-COMMON_VARS="$ROOT_DIR/env/lab/common.tfvars"
-STACK_VARS="$ROOT_DIR/env/lab/proxmox-base.tfvars"
-LEGACY_STATE="/tmp/legacy-lab.tfstate"
-NEW_STATE="/tmp/proxmox-base-lab.tfstate"
+COMMON_VARS="$ROOT_DIR/env/dev/common.tfvars"
+STACK_VARS="$ROOT_DIR/env/dev/proxmox-base.tfvars"
+LEGACY_STATE="/tmp/legacy-root-module.tfstate"
+NEW_STATE="/tmp/proxmox-base-dev.tfstate"
 
 LEGACY_CT="proxmox_lxc.cts[\"homarr\"]"
 NEW_CT="module.cts[\"homarr\"].proxmox_lxc.this"
@@ -78,7 +79,7 @@ export PATH="$ROOT_DIR/.tools/bin:$PATH"
 
 terraform -chdir="$STACK_DIR" init -backend=false
 terraform -chdir="$STACK_DIR" validate
-bash scripts/plan-stack.sh proxmox-base lab
+bash scripts/plan-stack.sh proxmox-base dev
 
 terraform -chdir="$ROOT_DIR" state pull > "$LEGACY_STATE"
 terraform -chdir="$STACK_DIR" state pull > "$NEW_STATE"
@@ -86,7 +87,7 @@ terraform -chdir="$STACK_DIR" state pull > "$NEW_STATE"
 terraform state mv -state="$LEGACY_STATE" -state-out="$NEW_STATE" "$LEGACY_CT" "$NEW_CT"
 terraform state mv -state="$LEGACY_STATE" -state-out="$NEW_STATE" "$LEGACY_VM" "$NEW_VM"
 
-terraform -chdir="$STACK_DIR" plan -var-file="$COMMON_VARS" -var-file="$STACK_VARS" -var environment=lab -var inventory_root=../../inventory
+terraform -chdir="$STACK_DIR" plan -var-file="$COMMON_VARS" -var-file="$STACK_VARS" -var environment=dev -var inventory_root=../../inventory
 EOF
 }
 
@@ -110,7 +111,7 @@ done
 
 "$TERRAFORM_BIN" -chdir="$STACK_DIR" init -backend=false
 "$TERRAFORM_BIN" -chdir="$STACK_DIR" validate
-bash "$ROOT_DIR/scripts/plan-stack.sh" proxmox-base lab
+bash "$ROOT_DIR/scripts/plan-stack.sh" proxmox-base dev
 
 "$TERRAFORM_BIN" -chdir="$ROOT_DIR" state pull > "$LEGACY_STATE"
 "$TERRAFORM_BIN" -chdir="$STACK_DIR" state pull > "$NEW_STATE"

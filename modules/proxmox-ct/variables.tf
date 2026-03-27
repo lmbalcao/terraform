@@ -129,11 +129,3 @@ variable "network_gateway" {
   nullable    = true
   description = "Static gateway."
 }
-
-variable "features" {
-  type = object({
-    nesting = optional(bool, true)
-  })
-  default     = {}
-  description = "Desired LXC feature flags reconciled after CT creation (currently nesting only here; keyctl/fuse/mount use features_manual)."
-}
