@@ -26,7 +26,9 @@ required_files=(
   docs/stack-boundaries.md
   docs/architecture-decisions/0001-inventory-and-state.md
   schemas/inventory-environment.schema.json
-  inventory/lab/ingress.yaml
+  inventory/dev/ingress.yaml
+  inventory/prod/ingress.yaml
+  inventory/legacy/lab/ingress.yaml
   scripts/update-changelog.py
   scripts/apply-proxmox-ct-features.py
   scripts/ensure-openwrt-firewall.py
@@ -40,7 +42,8 @@ required_files=(
   stacks/openwrt-dns/locals.tf
   stacks/openwrt-dns/main.tf
   stacks/openwrt-dns/outputs.tf
-  env/lab/openwrt-dns.tfvars.example
+  env/dev/openwrt-dns.tfvars.example
+  env/legacy/lab/openwrt-dns.tfvars.example
   legacy/root-module/README.md
 )
 
@@ -63,6 +66,20 @@ required_dirs=(
 for path in "${required_dirs[@]}"; do
   if [[ ! -d "$path" ]]; then
     echo "Missing required directory: $path" >&2
+    exit 1
+  fi
+done
+
+inactive_paths=(
+  env/lab
+  env/staging
+  inventory/lab
+  inventory/staging
+)
+
+for path in "${inactive_paths[@]}"; do
+  if [[ -e "$path" ]]; then
+    echo "Inactive path must not exist in active layout: $path" >&2
     exit 1
   fi
 done

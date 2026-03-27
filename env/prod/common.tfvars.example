@@ -1,0 +1,3 @@
+# Copy to env/prod/common.tfvars and adjust shared environment values as needed.
+environment = "prod"
+inventory_root = "../../inventory"

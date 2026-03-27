@@ -1,0 +1,17 @@
+# Copy to env/dev/openwrt-dns.tfvars and fill with real values.
+environment = "dev"
+inventory_root = "../../inventory"
+openwrt_hostname = "192.168.100.1"
+openwrt_port = 80
+openwrt_scheme = "http"
+openwrt_username = "root"
+openwrt_password = "REPLACE_ME"
+
+openwrt_firewall_enabled = true
+openwrt_firewall_apply = true
+
+# Required when CT services use DHCP and recommended for runtime firewall reconciliation.
+proxmox_api_url = "https://192.168.35.100:8006/api2/json"
+proxmox_api_token_id = "root@pam!pip"
+proxmox_api_token = "REPLACE_ME"
+proxmox_tls_insecure = true

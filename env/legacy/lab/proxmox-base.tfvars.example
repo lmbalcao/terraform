@@ -1,0 +1,13 @@
+# Archived historical example for the former lab environment.
+# Keep under env/legacy/lab/ for reference only; do not treat this as an active env/<environment> template.
+# proxmox-base depends on valid Proxmox credentials; placeholders fail validation and cannot prove the stack works.
+proxmox_api_url = "<proxmox-api-url>"
+proxmox_api_token_id = "<proxmox-user@realm!token-name>"
+proxmox_api_token = "<proxmox-api-token-secret>"
+root_password = "<ct-root-password>"
+default_search_domain = "lbtec.org"
+default_lxc_template = "local:vztmpl/debian-13-standard_amd64.tar.zst"
+network_bridge = "vmbr0"
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... replace-me",
+]

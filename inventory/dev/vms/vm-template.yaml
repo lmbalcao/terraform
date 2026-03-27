@@ -1,0 +1,32 @@
+version: 1
+kind: vm
+enabled: false
+vmid: 1780
+name: vm-template
+node: dev-proxmox
+tags: []
+network:
+  segment: vlan-17
+  mode: static
+  address: 192.168.99.80/24
+  gateway: 192.168.99.1
+resources:
+  cpu_cores: 2
+  cpu_sockets: 1
+  memory_mb: 1024
+boot:
+  on_boot: true
+  start_state: running
+storage:
+  rootfs_storage: local
+  rootfs_size_gb: 8
+qemu:
+  sockets: 1
+  agent_enabled: false
+  source: {}
+  disks: []
+services: []
+operations:
+  ansible_enabled: false
+  backup_policy: null
+  bootstrap_profile: null

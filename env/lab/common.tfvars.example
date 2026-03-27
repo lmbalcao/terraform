@@ -1,3 +1,0 @@
-# Copy to env/lab/common.tfvars and adjust shared environment values as needed.
-environment = "lab"
-inventory_root = "../../inventory"

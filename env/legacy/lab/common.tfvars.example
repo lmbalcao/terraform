@@ -1,0 +1,4 @@
+# Archived historical example for the former lab environment.
+# Keep under env/legacy/lab/ for reference only; do not use as an active env/<environment> template.
+environment = "lab"
+inventory_root = "../../inventory"

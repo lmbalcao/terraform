@@ -1,0 +1,33 @@
+version: 1
+kind: ct
+enabled: true
+vmid: 6011
+name: homarr
+hostname: homarr
+node: dev-proxmox
+tags:
+  - 60-servicos-externos
+network:
+  segment: vlan-99
+  mode: dhcp
+resources:
+  cpu_cores: 1
+  memory_mb: 1024
+  swap_mb: 1024
+boot:
+  on_boot: true
+  start: true
+storage:
+  rootfs_storage: local-lvm
+  rootfs_size_gb: 8
+lxc:
+  template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+  unprivileged: true
+  features:
+    nesting: true
+  mounts: []
+services: []
+operations:
+  ansible_enabled: false
+  backup_policy: null
+  bootstrap_profile: null

@@ -1,0 +1,13 @@
+# Copy to env/dev/proxmox-base.tfvars only for local use and replace every placeholder.
+# proxmox-base depends on valid Proxmox credentials; placeholders fail validation and cannot prove the stack works.
+proxmox_api_url = "<proxmox-api-url>"
+proxmox_api_token_id = "<proxmox-user@realm!token-name>"
+proxmox_api_token = "<proxmox-api-token-secret>"
+proxmox_tls_insecure = true
+root_password = "<ct-root-password>"
+default_search_domain = "lbtec.org"
+default_lxc_template = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+network_bridge = "vmbr0"
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... replace-me",
+]
