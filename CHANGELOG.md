@@ -58,8 +58,10 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.1.0] - 2026-03-28
+## [v2.2.0] - 2026-03-28
 
+- fix: add openwrt ssh reconcilers
+- chore: release v2.1.0
 - fix: make ct feature reconcile runner portable
 - fix: reconcile ct features over ssh pct
 - feat: support native ct features and app mounts
