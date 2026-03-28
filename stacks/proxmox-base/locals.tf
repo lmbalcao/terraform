@@ -218,13 +218,15 @@ locals {
 
   ct_features = {
     for name, ct in local.cts : name => {
-      nesting = try(ct.lxc.features.nesting, null)
-      keyctl  = try(ct.lxc.features.keyctl, try(ct.lxc.features_manual.keyctl, null))
-      fuse    = try(ct.lxc.features.fuse, try(ct.lxc.features_manual.fuse, null))
-      mknod   = try(ct.lxc.features.mknod, null)
+      nesting = try(ct.lxc.features.nesting, false)
+      keyctl  = try(ct.lxc.features.keyctl, try(ct.lxc.features_manual.keyctl, false))
+      fuse    = try(ct.lxc.features.fuse, try(ct.lxc.features_manual.fuse, false))
+      mknod   = try(ct.lxc.features.mknod, false)
       mount   = try(ct.lxc.features.mount, null)
     }
   }
+
+  cts_with_manual_features = local.ct_features
 
   vm_invalid_static_networks = [
     for name, vm in local.vms : name

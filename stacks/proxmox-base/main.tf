@@ -90,7 +90,6 @@ module "cts" {
   ssh_public_keys = var.ssh_public_keys
   nameserver      = try(length(each.value.network.dns_servers) > 0 ? each.value.network.dns_servers[0] : null, null)
   searchdomain    = try(each.value.network.dns_domain, null)
-  features        = local.ct_features[each.key]
   mountpoints     = local.ct_mountpoints[each.key]
 
   rootfs_storage = each.value.storage.rootfs_storage
@@ -101,6 +100,71 @@ module "cts" {
   network_mode    = each.value.network.mode
   network_ip_cidr = try(each.value.network.address, null)
   network_gateway = try(each.value.network.gateway, null)
+}
+
+resource "terraform_data" "ct_manual_features" {
+  for_each = local.cts_with_manual_features
+
+  input = {
+    ct_name = each.key
+    node    = module.cts[each.key].target_node
+    vmid    = module.cts[each.key].vmid
+    nesting = each.value.nesting
+    keyctl  = each.value.keyctl
+    fuse    = each.value.fuse
+  }
+
+  triggers_replace = [
+    tostring(module.cts[each.key].id),
+    sha256(jsonencode(each.value)),
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-lc"]
+    command     = <<-EOT
+      set -euo pipefail
+
+      ssh_args=(
+        -o BatchMode=yes
+        -o StrictHostKeyChecking=accept-new
+        -p "$PROXMOX_SSH_PORT"
+      )
+
+      if [ -n "$PROXMOX_SSH_KEY_PATH" ]; then
+        ssh_args+=(-i "$PROXMOX_SSH_KEY_PATH")
+      fi
+
+      feature_tokens=()
+      if [ "$CT_NESTING" = "1" ]; then
+        feature_tokens+=("nesting=1")
+      fi
+      if [ "$CT_KEYCTL" = "1" ]; then
+        feature_tokens+=("keyctl=1")
+      fi
+      if [ "$CT_FUSE" = "1" ]; then
+        feature_tokens+=("fuse=1")
+      fi
+
+      target="$${PROXMOX_SSH_USER}@$${PROXMOX_SSH_HOST}"
+      if [ "$${#feature_tokens[@]}" -gt 0 ]; then
+        feature_csv="$(IFS=,; echo "$${feature_tokens[*]}")"
+        ssh "$${ssh_args[@]}" "$target" "pct set '$CT_VMID' -features '$feature_csv'"
+      else
+        ssh "$${ssh_args[@]}" "$target" "pct set '$CT_VMID' -delete features"
+      fi
+    EOT
+
+    environment = {
+      CT_VMID              = tostring(module.cts[each.key].vmid)
+      CT_NESTING           = each.value.nesting ? "1" : "0"
+      CT_KEYCTL            = each.value.keyctl ? "1" : "0"
+      CT_FUSE              = each.value.fuse ? "1" : "0"
+      PROXMOX_SSH_HOST     = coalesce(var.proxmox_ssh_host, "")
+      PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
+      PROXMOX_SSH_USER     = var.proxmox_ssh_user
+      PROXMOX_SSH_KEY_PATH = coalesce(var.proxmox_ssh_private_key_path, "")
+    }
+  }
 }
 
 module "vms" {

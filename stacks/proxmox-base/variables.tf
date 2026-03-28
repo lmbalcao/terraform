@@ -114,3 +114,29 @@ variable "docker_apps_root" {
   nullable    = true
   description = "Optional path to the docker apps repository used to derive CT mountpoints from app docker-compose files."
 }
+
+variable "proxmox_ssh_host" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional SSH host used for CT feature reconciliation that requires root pct access."
+}
+
+variable "proxmox_ssh_port" {
+  type        = number
+  default     = 22
+  description = "SSH port used for CT feature reconciliation."
+}
+
+variable "proxmox_ssh_user" {
+  type        = string
+  default     = "root"
+  description = "SSH user used for CT feature reconciliation."
+}
+
+variable "proxmox_ssh_private_key_path" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional private key path used for CT feature reconciliation over SSH."
+}
