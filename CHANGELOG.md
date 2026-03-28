@@ -58,16 +58,13 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-- align active architecture to `dev` + `prod`
-- archive `lab` under `env/legacy/` and `inventory/legacy/`
-- prove `proxmox-base` dev planning on `dev-terraform-101` with real credentials
-- document `openwrt-dns` provider failure against the real LuCI endpoint exposed by the current OpenWrt host
+## [v2.1.0] - 2026-03-28
 
-- align active architecture to `dev` and `prod`
-- document `proxmox-base` real plan proof on `dev-terraform-101`
-- mark `openwrt-dns` official provider path as failing against the current OpenWrt LuCI endpoint
-- clarify `ansible` and `pbs` as minimal handoff stacks
-- document CT manual reconciliation and unsupported LXC mounts
+- feat: align dev reseed workflow and ct validation
+- docs: archive superpowers planning artifacts
+- docs: align repo documentation with runtime reality
+- feat: harden proxmox-base runtime contract
+- refactor: normalize active envs to dev and prod
 
 ## [v2.0.11] - 2026-03-23
 
