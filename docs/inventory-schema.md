@@ -75,7 +75,7 @@ version: 1
 traefik_instances: {}
 ```
 
-Se forem usados serviços Traefik, cada `traefik_tag` tem de existir aqui.
+Se forem usados serviços Traefik, cada `traefik_tag` tem de existir aqui. Cada `traefik_tag` corresponde operacionalmente a uma instância do provider plugin no runtime Traefik.
 
 ## `defaults.yaml`
 

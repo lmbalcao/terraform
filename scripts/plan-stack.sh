@@ -14,6 +14,15 @@ RUNNER_MODE=""
 RUNNER_ROOT=""
 COMPOSE_FILE=""
 DOCKER_COMPOSE_CMD=()
+TF_CLI_CONFIG_FILE_TMP=""
+
+cleanup() {
+  if [[ -n "$TF_CLI_CONFIG_FILE_TMP" && -f "$TF_CLI_CONFIG_FILE_TMP" ]]; then
+    rm -f "$TF_CLI_CONFIG_FILE_TMP"
+  fi
+}
+
+trap cleanup EXIT
 
 resolve_terraform() {
   if [[ -n "${TERRAFORM_BIN:-}" && -x "${TERRAFORM_BIN}" ]]; then
@@ -180,11 +189,58 @@ to_runner_path() {
 
 run_terraform() {
   if [[ "$RUNNER_MODE" == "local" ]]; then
-    "$TERRAFORM_BIN" "$@"
+    if [[ -n "$TF_CLI_CONFIG_FILE_TMP" ]]; then
+      TF_CLI_CONFIG_FILE="$TF_CLI_CONFIG_FILE_TMP" "$TERRAFORM_BIN" "$@"
+    else
+      "$TERRAFORM_BIN" "$@"
+    fi
     return 0
   fi
 
+  if [[ -n "$TF_CLI_CONFIG_FILE_TMP" ]]; then
+    echo "OpenWrt provider dev override is only supported in local runner mode." >&2
+    exit 1
+  fi
+
   "${DOCKER_COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" run --rm -T -v "$ROOT_DIR:/workspace" terraform "$@"
+}
+
+setup_openwrt_provider_override() {
+  local provider_dir provider_binary provider_source
+
+  if [[ "$STACK" != "openwrt-dns" ]]; then
+    return 0
+  fi
+
+  if [[ "${OPENWRT_PROVIDER_DEV_OVERRIDE:-}" != "1" && -z "${OPENWRT_PROVIDER_OVERRIDE_DIR:-}" ]]; then
+    return 0
+  fi
+
+  provider_dir="${OPENWRT_PROVIDER_OVERRIDE_DIR:-$ROOT_DIR/../terraform-provider-openwrt}"
+  provider_binary="${OPENWRT_PROVIDER_BINARY_NAME:-terraform-provider-openwrt}"
+  provider_source="${OPENWRT_PROVIDER_SOURCE:-joneshf/openwrt}"
+
+  if [[ "$RUNNER_MODE" != "local" ]]; then
+    echo "OpenWrt provider dev override requires a local Terraform runner." >&2
+    exit 1
+  fi
+
+  if [[ ! -x "$provider_dir/$provider_binary" ]]; then
+    echo "OpenWrt provider override binary not found: $provider_dir/$provider_binary" >&2
+    echo "Build it first with scripts/sync-local-openwrt-provider.sh or point OPENWRT_PROVIDER_OVERRIDE_DIR to a valid build." >&2
+    exit 1
+  fi
+
+  TF_CLI_CONFIG_FILE_TMP="$(mktemp /tmp/openwrt-provider-XXXXXX.tfrc)"
+  cat >"$TF_CLI_CONFIG_FILE_TMP" <<EOF
+provider_installation {
+  dev_overrides {
+    "$provider_source" = "$provider_dir"
+  }
+
+  direct {}
+}
+EOF
 }
 
 if [[ "$STACK" == "proxmox-base" ]]; then
@@ -205,6 +261,8 @@ EOF
     exit 1
   fi
 fi
+
+setup_openwrt_provider_override
 
 run_terraform -chdir="$TF_STACK_DIR" init -backend=false
 

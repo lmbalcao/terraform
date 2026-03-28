@@ -2,6 +2,7 @@ resource "proxmox_vm_qemu" "this" {
   target_node = var.target_node
   name        = var.name
   tags        = length(var.tags) > 0 ? join(";", var.tags) : null
+  description = var.description
   vmid        = var.vmid
 
   ciuser             = var.ci_user

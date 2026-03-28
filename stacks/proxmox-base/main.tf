@@ -176,11 +176,12 @@ module "vms" {
   name        = each.value.name
   vmid        = each.value.vmid
   tags        = try(each.value.tags, [])
+  description = try(local.vm_descriptions[each.key], null)
 
-  cpu_cores   = each.value.resources.cpu_cores
-  cpu_sockets = try(each.value.resources.cpu_sockets, try(each.value.qemu.sockets, 1))
-  memory_mb   = each.value.resources.memory_mb
-  kvm_enabled = try(each.value.qemu.kvm_enabled, true)
+  cpu_cores     = each.value.resources.cpu_cores
+  cpu_sockets   = try(each.value.resources.cpu_sockets, try(each.value.qemu.sockets, 1))
+  memory_mb     = each.value.resources.memory_mb
+  kvm_enabled   = try(each.value.qemu.kvm_enabled, true)
   scsi_hardware = try(each.value.qemu.scsi_hardware, "lsi")
 
   start_at_node_boot = each.value.boot.on_boot

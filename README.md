@@ -6,6 +6,7 @@ Repositorio Terraform para gerir infraestrutura Proxmox a partir de inventario Y
 
 - `stacks/proxmox-base` modela e planeia CTs e VMs Proxmox a partir de `inventory/<environment>/`
 - `stacks/openwrt-dns` deriva registos DNS e regras agregadas de firewall OpenWrt a partir de `services[]` e `ingress.yaml`
+- `stacks/proxmox-base` prepara notes/description Proxmox compatíveis com o `traefik-proxmox-provider` para CTs e VMs
 - `stacks/ansible` e `stacks/pbs` sao stacks minimos de handoff; filtram outputs do core, mas nao gerem sistemas externos diretamente
 - `legacy/root-module/` existe apenas para referencia historica e apoio a migracao de state
 
@@ -38,19 +39,27 @@ Resultado provado:
 
 ### `openwrt-dns`
 
-Prova real obtida no mesmo CT e com credenciais reais.
+Evidência atual no workspace:
 
-Resultado provado:
+- o source Terraform continua a ser `joneshf/openwrt`
+- o repo suporta override local do provider com `dev_overrides` para o fork `../terraform-provider-openwrt`
+- o fork local implementa fallback para `/cgi-bin/luci/admin/ubus`
 
-- o provider oficial `joneshf/openwrt` entra no `plan`
-- o `plan` falha ao criar o cliente LuCI RPC
-- o host real responde:
-  - `/cgi-bin/luci/rpc/auth` -> `404`
-  - `/cgi-bin/luci/admin/ubus` -> `200`
-- o binario oficial encontrado no workspace contem `/cgi-bin/luci/rpc/auth`
-- o stack atual nao expoe qualquer variavel para trocar esse path para `/cgi-bin/luci/admin/ubus`
+Validação estrutural local é suportada com:
 
-Conclusao suportada: a falha atual e de compatibilidade do provider com o endpoint real exposto por este OpenWrt, nao de reachability nem de password errada.
+```bash
+terraform -chdir=stacks/openwrt-dns init -backend=false
+terraform -chdir=stacks/openwrt-dns validate
+```
+
+Quando o OpenWrt real exigir o fork local:
+
+```bash
+bash scripts/sync-local-openwrt-provider.sh
+OPENWRT_PROVIDER_DEV_OVERRIDE=1 bash scripts/plan-stack.sh openwrt-dns dev
+```
+
+Sem credenciais reais e reachability nao ha prova honesta de `plan/apply` completos.
 
 ### `ansible` e `pbs`
 
@@ -146,3 +155,6 @@ No host `dev-terraform-101`:
 - `docs/state-migration-map-lab.md`
 - `docs/local-credentials.md`
 - `docs/architecture-report-dev-prod.md`
+- `docs/integrations/openwrt-provider.md`
+- `docs/integrations/traefik-proxmox-provider.md`
+- `docs/integrations/secrets-and-runtime.md`

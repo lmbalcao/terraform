@@ -32,7 +32,13 @@ python3 scripts/render-local-tfvars.py \
 
 3. Se o manifesto usar `"environment": "dev"`, os ficheiros gerados passam a `dev-*.tfvars.json`. Os ficheiros `lab-*` atualmente presentes no CT sao legado operacional.
 
-4. Usar os ficheiros resultantes com `-var-file`, por exemplo:
+4. O mesmo render passa agora a produzir tambem:
+
+- `/mnt/data/terraform-lab/tfvars/dev-traefik-proxmox-provider.env`
+
+Esse ficheiro e para o runtime Traefik, nao para o Terraform.
+
+5. Usar os ficheiros resultantes com `-var-file`, por exemplo:
 
 ```bash
 STACK_VARS_FILE=/mnt/data/terraform-lab/tfvars/dev-proxmox-base.tfvars.json \

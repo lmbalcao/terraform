@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 
 def build_proxmox_base(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -41,9 +42,47 @@ def build_openwrt_dns(manifest: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def normalize_proxmox_api_endpoint(api_url: str) -> str:
+    parsed = urlsplit(api_url)
+    path = parsed.path.rstrip("/")
+    if path.endswith("/api2/json"):
+        path = path[: -len("/api2/json")]
+    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def build_traefik_proxmox_provider_env(manifest: dict[str, Any]) -> dict[str, str]:
+    proxmox = manifest["proxmox"]
+    traefik = manifest.get("traefik_proxmox_provider", {})
+    validate_ssl = bool(traefik.get("api_validate_ssl", not bool(proxmox.get("tls_insecure", False))))
+
+    payload = {
+        "PROXMOX_API_ENDPOINT": str(traefik.get("api_endpoint", normalize_proxmox_api_endpoint(proxmox["api_url"]))),
+        "PROXMOX_TOKEN_ID": str(traefik.get("api_token_id", proxmox["api_token_id"])),
+        "PROXMOX_TOKEN_SECRET": str(traefik.get("api_token", proxmox["api_token"])),
+        "PROXMOX_POLL_INTERVAL": str(traefik.get("poll_interval", "30s")),
+        "PROXMOX_API_LOGGING": str(traefik.get("api_logging", "info")),
+        "PROXMOX_API_VALIDATE_SSL": "true" if validate_ssl else "false",
+    }
+
+    if "label_prefix" in traefik:
+        payload["TRAEFIK_PROXMOX_LABEL_PREFIX"] = str(traefik["label_prefix"])
+    if "plugin_module_name" in traefik:
+        payload["TRAEFIK_PROXMOX_PLUGIN_MODULE_NAME"] = str(traefik["plugin_module_name"])
+    if "plugin_version" in traefik:
+        payload["TRAEFIK_PROXMOX_PLUGIN_VERSION"] = str(traefik["plugin_version"])
+
+    return payload
+
+
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_env(path: Path, payload: dict[str, str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"{key}={value}" for key, value in payload.items()]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,6 +103,7 @@ def main() -> int:
     write_json(output_dir / f"{environment}-proxmox-base.tfvars.json", build_proxmox_base(manifest))
     write_json(output_dir / f"{environment}-openwrt-dns.tfvars.json", build_openwrt_dns(manifest))
     write_json(output_dir / f"{environment}-external-hosts.json", {"environment": environment, "hosts": manifest["hosts"]})
+    write_env(output_dir / f"{environment}-traefik-proxmox-provider.env", build_traefik_proxmox_provider_env(manifest))
     return 0
 
 

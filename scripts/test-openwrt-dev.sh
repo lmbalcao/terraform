@@ -7,6 +7,7 @@ STACK="${STACK:-openwrt-dns}"
 STACK_DIR="$ROOT_DIR/stacks/$STACK"
 PROVIDER_DIR="${PROVIDER_DIR:-$ROOT_DIR/../terraform-provider-openwrt}"
 PROXMOX_VERSION_URL="${PROXMOX_VERSION_URL:-https://192.168.99.100:8006/api2/json/version}"
+PROXMOX_VALIDATE_SSL="${PROXMOX_VALIDATE_SSL:-false}"
 OPENWRT_BASE_URL="${OPENWRT_BASE_URL:-http://192.168.99.200:80}"
 OPENWRT_USERNAME="${OPENWRT_USERNAME:-root}"
 OPENWRT_PASSWORD="${OPENWRT_PASSWORD:-sandman}"
@@ -73,22 +74,26 @@ provider_installation {
 EOF
 }
 probe_hosts() {
-  python3 - "$PROXMOX_VERSION_URL" "$OPENWRT_BASE_URL" "$OPENWRT_USERNAME" "$OPENWRT_PASSWORD" <<EOF
+  python3 - "$PROXMOX_VERSION_URL" "$PROXMOX_VALIDATE_SSL" "$OPENWRT_BASE_URL" "$OPENWRT_USERNAME" "$OPENWRT_PASSWORD" <<EOF
 import json
+import ssl
 import sys
 import urllib.error
 import urllib.request
-proxmox_url, openwrt_base, username, password = sys.argv[1:]
-def request(url, payload=None):
+proxmox_url, proxmox_validate_ssl, openwrt_base, username, password = sys.argv[1:]
+def request(url, payload=None, validate_ssl=True):
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     headers = {} if payload is None else {"Content-Type": "application/json"}
     req = urllib.request.Request(url, data=data, headers=headers)
+    context = None
+    if not validate_ssl and url.startswith("https://"):
+        context = ssl._create_unverified_context()
     try:
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with urllib.request.urlopen(req, timeout=15, context=context) as response:
             return response.getcode(), response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", errors="replace")
-proxmox_status, proxmox_body = request(proxmox_url)
+proxmox_status, proxmox_body = request(proxmox_url, validate_ssl=proxmox_validate_ssl.lower() == "true")
 if proxmox_status != 200:
     raise SystemExit("Proxmox version probe failed: " + str(proxmox_status))
 legacy_status, _ = request(openwrt_base + "/cgi-bin/luci/rpc/auth")

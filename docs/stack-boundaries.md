@@ -9,7 +9,7 @@ Responsabilidades reais:
 - criar CTs com `module.cts -> proxmox_lxc`
 - criar VMs com `module.vms -> proxmox_vm_qemu`
 - expor outputs consumiveis por stacks externos
-- gerar notes/description Proxmox quando um workload tem `services[]` com `traefik_tag`, `traefik_label`, `uri` e `port`
+- gerar notes/description Proxmox para CTs e VMs quando um workload tem `services[]` com `traefik_tag`, `traefik_label`, `uri` e `port`
 - reconciliar pos-criacao de CT para:
   - `nesting`
   - `keyctl`

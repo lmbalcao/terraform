@@ -19,6 +19,13 @@ variable "tags" {
   description = "Workload tags."
 }
 
+variable "description" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional VM description written to Proxmox notes."
+}
+
 variable "cpu_cores" {
   type        = number
   description = "CPU cores."

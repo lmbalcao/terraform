@@ -49,7 +49,7 @@ ensure_repo() {
   fi
   [[ -d "$PROVIDER_DIR/.git" ]] || die "$PROVIDER_DIR exists but is not a git repository"
   local tracked_changes
-  tracked_changes="$(git -C "$PROVIDER_DIR" status --porcelain --untracked-files=no)"
+  tracked_changes="$(git -C "$PROVIDER_DIR" status --porcelain --untracked-files=no -- . ":(exclude)$PROVIDER_BINARY_NAME" ":(exclude)$(basename "$BUILD_COMMIT_FILE")")"
   if [[ -n "$tracked_changes" ]]; then
     die "provider repo has tracked local changes; aborting before fetch/pull"
   fi

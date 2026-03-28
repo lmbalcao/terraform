@@ -46,6 +46,7 @@ locals {
 
       mountpoints = []
     }
+  }
 
   vms = {
     vm_template = {
@@ -81,7 +82,7 @@ locals {
     for name, ct in local.cts : name => ct
     if lookup(ct, "enabled", true)
   }
-  
+
   enabled_vms = {
     for name, vm in local.vms : name => vm
     if lookup(vm, "enabled", true)

@@ -5,7 +5,7 @@ locals {
     : abspath("${path.root}/${var.inventory_root}")
   )
   inventory_env_dir = "${local.inventory_root_dir}/${var.environment}"
-  docker_apps_root  = var.docker_apps_root == null ? null : (
+  docker_apps_root = var.docker_apps_root == null ? null : (
     startswith(var.docker_apps_root, "/")
     ? var.docker_apps_root
     : abspath("${path.root}/${var.docker_apps_root}")
@@ -258,6 +258,43 @@ locals {
         [for tag in local.ct_description_tags[name] : format("%s.enable=true", tag)],
         flatten([
           for service in local.ct_traefik_services[name] : [
+            format("%s.http.routers.%s.rule=Host(`%s`)", service.traefik_tag, service.traefik_label, service.uri),
+            format("%s.http.routers.%s.entrypoints=websecure", service.traefik_tag, service.traefik_label),
+            format("%s.http.routers.%s.middlewares=compression@file", service.traefik_tag, service.traefik_label),
+            format("%s.http.routers.%s.tls=true", service.traefik_tag, service.traefik_label),
+            format("%s.http.routers.%s.tls.certresolver=le", service.traefik_tag, service.traefik_label),
+            format("%s.http.services.%s.loadbalancer.server.port=%s", service.traefik_tag, service.traefik_label, service.port),
+          ]
+        ])
+      ))
+    )
+  }
+
+  vm_traefik_services = {
+    for name, vm in local.vms : name => [
+      for service in try(vm.services, []) : {
+        traefik_tag   = try(service.traefik_tag, null)
+        traefik_label = try(service.traefik_label, null)
+        uri           = try(service.uri, null)
+        port          = try(service.port, null)
+      }
+      if try(service.traefik_tag, null) != null && try(service.traefik_label, null) != null && try(service.uri, null) != null && try(service.port, null) != null
+    ]
+  }
+
+  vm_description_tags = {
+    for name, services in local.vm_traefik_services : name => distinct([for service in services : service.traefik_tag])
+  }
+
+  vm_descriptions = {
+    for name, vm in local.vms : name => (
+      length(local.vm_traefik_services[name]) == 0
+      ? null
+      : join("\n\n", concat(
+        [try(vm.notes_title, vm.name)],
+        [for tag in local.vm_description_tags[name] : format("%s.enable=true", tag)],
+        flatten([
+          for service in local.vm_traefik_services[name] : [
             format("%s.http.routers.%s.rule=Host(`%s`)", service.traefik_tag, service.traefik_label, service.uri),
             format("%s.http.routers.%s.entrypoints=websecure", service.traefik_tag, service.traefik_label),
             format("%s.http.routers.%s.middlewares=compression@file", service.traefik_tag, service.traefik_label),
