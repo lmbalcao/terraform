@@ -21,7 +21,10 @@ resource "proxmox_lxc" "this" {
   searchdomain    = var.searchdomain
 
   dynamic "features" {
-    for_each = length(keys(var.features)) > 0 ? [var.features] : []
+    for_each = length([
+      for value in values(var.features) : value
+      if value != null && value != false && value != ""
+    ]) > 0 ? [var.features] : []
     content {
       nesting = try(features.value.nesting, null)
       keyctl  = try(features.value.keyctl, null)

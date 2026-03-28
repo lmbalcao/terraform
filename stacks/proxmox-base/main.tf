@@ -120,37 +120,38 @@ resource "terraform_data" "ct_manual_features" {
   ]
 
   provisioner "local-exec" {
-    interpreter = ["/bin/bash", "-lc"]
+    interpreter = ["/bin/sh", "-c"]
     command     = <<-EOT
-      set -euo pipefail
+      set -eu
 
-      ssh_args=(
-        -o BatchMode=yes
-        -o StrictHostKeyChecking=accept-new
-        -p "$PROXMOX_SSH_PORT"
-      )
+      ssh_cmd="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p '$PROXMOX_SSH_PORT'"
 
       if [ -n "$PROXMOX_SSH_KEY_PATH" ]; then
-        ssh_args+=(-i "$PROXMOX_SSH_KEY_PATH")
+        ssh_cmd="$ssh_cmd -i '$PROXMOX_SSH_KEY_PATH'"
       fi
 
-      feature_tokens=()
+      feature_csv=""
       if [ "$CT_NESTING" = "1" ]; then
-        feature_tokens+=("nesting=1")
+        feature_csv="nesting=1"
       fi
       if [ "$CT_KEYCTL" = "1" ]; then
-        feature_tokens+=("keyctl=1")
+        if [ -n "$feature_csv" ]; then
+          feature_csv="$feature_csv,"
+        fi
+        feature_csv="$${feature_csv}keyctl=1"
       fi
       if [ "$CT_FUSE" = "1" ]; then
-        feature_tokens+=("fuse=1")
+        if [ -n "$feature_csv" ]; then
+          feature_csv="$feature_csv,"
+        fi
+        feature_csv="$${feature_csv}fuse=1"
       fi
 
       target="$${PROXMOX_SSH_USER}@$${PROXMOX_SSH_HOST}"
-      if [ "$${#feature_tokens[@]}" -gt 0 ]; then
-        feature_csv="$(IFS=,; echo "$${feature_tokens[*]}")"
-        ssh "$${ssh_args[@]}" "$target" "pct set '$CT_VMID' -features '$feature_csv'"
+      if [ -n "$feature_csv" ]; then
+        eval "$ssh_cmd '$target' \"pct set '$CT_VMID' -features '$feature_csv'\""
       else
-        ssh "$${ssh_args[@]}" "$target" "pct set '$CT_VMID' -delete features"
+        eval "$ssh_cmd '$target' \"pct set '$CT_VMID' -delete features\""
       fi
     EOT
 
