@@ -1,5 +1,10 @@
 locals {
-  inventory_env_dir = abspath("${path.root}/${var.inventory_root}/${var.environment}")
+  inventory_root_dir = (
+    startswith(var.inventory_root, "/")
+    ? var.inventory_root
+    : abspath("${path.root}/${var.inventory_root}")
+  )
+  inventory_env_dir = "${local.inventory_root_dir}/${var.environment}"
 
   defaults_document = yamldecode(file("${local.inventory_env_dir}/defaults.yaml"))
   ingress_document  = yamldecode(file("${local.inventory_env_dir}/ingress.yaml"))

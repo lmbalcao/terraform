@@ -20,9 +20,36 @@ resource "proxmox_lxc" "this" {
   nameserver      = var.nameserver
   searchdomain    = var.searchdomain
 
+  dynamic "features" {
+    for_each = length(keys(var.features)) > 0 ? [var.features] : []
+    content {
+      nesting = try(features.value.nesting, null)
+      keyctl  = try(features.value.keyctl, null)
+      fuse    = try(features.value.fuse, null)
+      mknod   = try(features.value.mknod, null)
+      mount   = try(features.value.mount, null)
+    }
+  }
+
   rootfs {
     storage = var.rootfs_storage
     size    = "${var.rootfs_size_gb}G"
+  }
+
+  dynamic "mountpoint" {
+    for_each = var.mountpoints
+    content {
+      key       = mountpoint.value.key
+      slot      = mountpoint.value.slot
+      mp        = mountpoint.value.mp
+      storage   = try(mountpoint.value.storage, null)
+      size      = try(mountpoint.value.size, null)
+      backup    = try(mountpoint.value.backup, null)
+      quota     = try(mountpoint.value.quota, null)
+      replicate = try(mountpoint.value.replicate, null)
+      shared    = try(mountpoint.value.shared, null)
+      acl       = try(mountpoint.value.acl, null)
+    }
   }
 
   network {

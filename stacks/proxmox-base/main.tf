@@ -42,6 +42,13 @@ check "ct_templates_resolved" {
   }
 }
 
+check "ct_app_compose_files_resolved" {
+  assert {
+    condition     = length(local.ct_missing_app_compose_files) == 0
+    error_message = format("Each declared CT app must resolve to docker-compose.yml under docker_apps_root: %s", join(", ", local.ct_missing_app_compose_files))
+  }
+}
+
 check "static_networks_complete" {
   assert {
     condition     = length(local.ct_invalid_static_networks) == 0 && length(local.vm_invalid_static_networks) == 0
@@ -83,6 +90,8 @@ module "cts" {
   ssh_public_keys = var.ssh_public_keys
   nameserver      = try(length(each.value.network.dns_servers) > 0 ? each.value.network.dns_servers[0] : null, null)
   searchdomain    = try(each.value.network.dns_domain, null)
+  features        = local.ct_features[each.key]
+  mountpoints     = local.ct_mountpoints[each.key]
 
   rootfs_storage = each.value.storage.rootfs_storage
   rootfs_size_gb = each.value.storage.rootfs_size_gb
@@ -92,86 +101,6 @@ module "cts" {
   network_mode    = each.value.network.mode
   network_ip_cidr = try(each.value.network.address, null)
   network_gateway = try(each.value.network.gateway, null)
-}
-
-resource "terraform_data" "ct_manual_features" {
-  for_each = local.cts_with_manual_features
-
-  # The active CT contract still reconciles nesting/keyctl/fuse and selected
-  # config fields after creation via the Proxmox API or local pct.
-
-  input = {
-    ct_name      = each.key
-    node         = module.cts[each.key].target_node
-    vmid         = module.cts[each.key].vmid
-    nesting      = each.value.nesting
-    keyctl       = each.value.keyctl
-    fuse         = each.value.fuse
-    description  = each.value.description
-    nameserver   = each.value.nameserver
-    searchdomain = each.value.searchdomain
-  }
-
-  triggers_replace = [
-    tostring(module.cts[each.key].id),
-    sha256(jsonencode(each.value)),
-  ]
-
-  provisioner "local-exec" {
-    command     = <<-EOT
-      if ! command -v python3 >/dev/null 2>&1; then
-        apk add --no-cache python3 >/dev/null
-      fi
-
-      set -- \
-        python3 \
-        ${path.root}/../../scripts/apply-proxmox-ct-features.py \
-        --node "$CT_NODE" \
-        --vmid "$CT_VMID"
-
-      if [ "$CT_NESTING" = "1" ]; then
-        set -- "$@" --nesting
-      fi
-      if [ "$CT_KEYCTL" = "1" ]; then
-        set -- "$@" --keyctl
-      fi
-      if [ "$CT_FUSE" = "1" ]; then
-        set -- "$@" --fuse
-      fi
-      if [ -n "$CT_DESCRIPTION" ]; then
-        set -- "$@" --description "$CT_DESCRIPTION"
-      else
-        set -- "$@" --delete-description
-      fi
-      if [ -n "$CT_NAMESERVER" ]; then
-        set -- "$@" --nameserver "$CT_NAMESERVER"
-      else
-        set -- "$@" --delete-nameserver
-      fi
-      if [ -n "$CT_SEARCHDOMAIN" ]; then
-        set -- "$@" --searchdomain "$CT_SEARCHDOMAIN"
-      else
-        set -- "$@" --delete-searchdomain
-      fi
-
-      exec "$@"
-    EOT
-    interpreter = ["/bin/sh", "-c"]
-    environment = {
-      CT_NODE                  = module.cts[each.key].target_node
-      CT_VMID                  = tostring(module.cts[each.key].vmid)
-      CT_NESTING               = each.value.nesting ? "1" : "0"
-      CT_KEYCTL                = each.value.keyctl ? "1" : "0"
-      CT_FUSE                  = each.value.fuse ? "1" : "0"
-      CT_DESCRIPTION           = each.value.description
-      CT_NAMESERVER            = each.value.nameserver
-      CT_SEARCHDOMAIN          = each.value.searchdomain
-      PROXMOX_API_URL          = var.proxmox_api_url
-      PROXMOX_API_TOKEN_ID     = var.proxmox_api_token_id
-      PROXMOX_API_TOKEN_SECRET = var.proxmox_api_token
-      PROXMOX_TLS_INSECURE     = tostring(var.proxmox_tls_insecure)
-    }
-  }
 }
 
 module "vms" {

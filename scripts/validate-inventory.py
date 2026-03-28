@@ -443,6 +443,10 @@ def validate_common_workload(
             )
 
     require_mapping(workload.get("operations", {}), f"{context}.operations", errors)
+    if "apps" in workload and workload["apps"] is not None:
+        apps = require_list(workload["apps"], f"{context}.apps", errors)
+        for index, app in enumerate(apps):
+            expect_type(app, str, f"{context}.apps[{index}]", errors)
 
 
 def validate_ct_workload(
@@ -482,8 +486,11 @@ def validate_ct_workload(
         expect_type(lxc["template"], str, f"{context}.lxc.template", errors)
     if "features" in lxc:
         features = require_mapping(lxc["features"], f"{context}.lxc.features", errors)
-        if "nesting" in features and features["nesting"] is not None:
-            expect_type(features["nesting"], bool, f"{context}.lxc.features.nesting", errors)
+        for key in ("nesting", "keyctl", "fuse", "mknod"):
+            if key in features and features[key] is not None:
+                expect_type(features[key], bool, f"{context}.lxc.features.{key}", errors)
+        if "mount" in features and features["mount"] is not None:
+            expect_type(features["mount"], str, f"{context}.lxc.features.mount", errors)
     if "features_manual" in lxc:
         features_manual = require_mapping(lxc["features_manual"], f"{context}.lxc.features_manual", errors)
         for key in ("keyctl", "fuse"):
@@ -499,8 +506,29 @@ def validate_ct_workload(
                 )
     if "mounts" in lxc:
         mounts = require_list(lxc["mounts"], f"{context}.lxc.mounts", errors)
-        if mounts:
-            append_error(errors, f"{context}.lxc.mounts", "non-empty mounts are not yet supported in stacks/proxmox-base")
+        for index, mount in enumerate(mounts):
+            mount_map = require_mapping(mount, f"{context}.lxc.mounts[{index}]", errors)
+            for key in ("slot",):
+                if key not in mount_map:
+                    append_error(errors, f"{context}.lxc.mounts[{index}]", f"missing required field `{key}`")
+            if "slot" in mount_map and mount_map["slot"] is not None:
+                expect_type(mount_map["slot"], int, f"{context}.lxc.mounts[{index}].slot", errors)
+            if "key" in mount_map and mount_map["key"] is not None:
+                expect_type(mount_map["key"], str, f"{context}.lxc.mounts[{index}].key", errors)
+            if "mp" in mount_map and mount_map["mp"] is not None:
+                expect_type(mount_map["mp"], str, f"{context}.lxc.mounts[{index}].mp", errors)
+            if "guest_path" in mount_map and mount_map["guest_path"] is not None:
+                expect_type(mount_map["guest_path"], str, f"{context}.lxc.mounts[{index}].guest_path", errors)
+            if mount_map.get("mp") is None and mount_map.get("guest_path") is None:
+                append_error(errors, f"{context}.lxc.mounts[{index}]", "requires `mp` or `guest_path`")
+            for key in ("storage", "size"):
+                if key in mount_map and mount_map[key] is not None:
+                    expect_type(mount_map[key], str, f"{context}.lxc.mounts[{index}].{key}", errors)
+            if "size_gb" in mount_map and mount_map["size_gb"] is not None:
+                expect_type(mount_map["size_gb"], int, f"{context}.lxc.mounts[{index}].size_gb", errors)
+            for key in ("backup", "quota", "replicate", "shared", "acl"):
+                if key in mount_map and mount_map[key] is not None:
+                    expect_type(mount_map[key], bool, f"{context}.lxc.mounts[{index}].{key}", errors)
 
 
 def validate_vm_workload(

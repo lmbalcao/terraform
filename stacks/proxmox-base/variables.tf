@@ -107,3 +107,10 @@ variable "network_bridge" {
   default     = "vmbr0"
   description = "Fallback bridge name."
 }
+
+variable "docker_apps_root" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional path to the docker apps repository used to derive CT mountpoints from app docker-compose files."
+}

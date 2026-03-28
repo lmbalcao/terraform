@@ -1,5 +1,15 @@
 locals {
-  inventory_env_dir = abspath("${path.root}/${var.inventory_root}/${var.environment}")
+  inventory_root_dir = (
+    startswith(var.inventory_root, "/")
+    ? var.inventory_root
+    : abspath("${path.root}/${var.inventory_root}")
+  )
+  inventory_env_dir = "${local.inventory_root_dir}/${var.environment}"
+  docker_apps_root  = var.docker_apps_root == null ? null : (
+    startswith(var.docker_apps_root, "/")
+    ? var.docker_apps_root
+    : abspath("${path.root}/${var.docker_apps_root}")
+  )
 
   defaults_document = yamldecode(file("${local.inventory_env_dir}/defaults.yaml"))
   nodes_document    = yamldecode(file("${local.inventory_env_dir}/nodes.yaml"))
@@ -25,6 +35,7 @@ locals {
       ct,
       {
         tags     = try(ct.tags, try(local.defaults.common.tags, []))
+        apps     = try(ct.apps, try(local.defaults.common.apps, []))
         services = try(ct.services, try(local.defaults.common.services, []))
         operations = merge(
           try(local.defaults.common.operations, {}),
@@ -70,6 +81,7 @@ locals {
       vm,
       {
         tags     = try(vm.tags, try(local.defaults.common.tags, []))
+        apps     = try(vm.apps, try(local.defaults.common.apps, []))
         services = try(vm.services, try(local.defaults.common.services, []))
         operations = merge(
           try(local.defaults.common.operations, {}),
@@ -129,16 +141,88 @@ locals {
     if ct.network.mode == "static" && (try(ct.network.address, null) == null || try(ct.network.gateway, null) == null)
   ]
 
-  # Manual reconciliation stays explicit until the active CT contract can
-  # prove these fields end-to-end through native Terraform resources.
-  cts_with_manual_features = {
+  ct_missing_app_compose_files = distinct(flatten([
+    for name, ct in local.cts : [
+      for app in try(ct.apps, []) : format("%s:%s", name, app)
+      if local.docker_apps_root == null || !fileexists("${local.docker_apps_root}/${app}/docker-compose.yml")
+    ]
+  ]))
+
+  ct_app_compose_documents = {
     for name, ct in local.cts : name => {
-      nesting      = try(ct.lxc.features.nesting, true)
-      keyctl       = try(ct.lxc.features_manual.keyctl, false)
-      fuse         = try(ct.lxc.features_manual.fuse, false)
-      description  = try(local.ct_descriptions[name], "") == null ? "" : local.ct_descriptions[name]
-      nameserver   = try(length(ct.network.dns_servers) > 0 ? ct.network.dns_servers[0] : "", "")
-      searchdomain = try(ct.network.dns_domain, "") == null ? "" : ct.network.dns_domain
+      for app in try(ct.apps, []) : app => yamldecode(file("${local.docker_apps_root}/${app}/docker-compose.yml"))
+      if local.docker_apps_root != null && fileexists("${local.docker_apps_root}/${app}/docker-compose.yml")
+    }
+  }
+
+  ct_app_mount_candidates = {
+    for name, ct in local.cts : name => distinct(flatten([
+      for app, compose in try(local.ct_app_compose_documents[name], {}) : flatten([
+        for service in values(try(compose.services, {})) : [
+          for volume in try(service.volumes, []) : (
+            can(keys(volume))
+            ? (
+              try(volume.type, null) == "bind" && try(startswith(tostring(volume.source), "/"), false)
+              ? tostring(volume.source)
+              : null
+            )
+            : (
+              try(startswith(trimspace(split(":", tostring(volume))[0]), "/"), false)
+              ? trimspace(split(":", tostring(volume))[0])
+              : null
+            )
+          )
+        ]
+      ])
+    ]))
+  }
+
+  ct_declared_mounts = {
+    for name, ct in local.cts : name => [
+      for mount in try(ct.lxc.mounts, []) : {
+        key       = try(mount.key, format("mp%d", tonumber(mount.slot)))
+        slot      = tonumber(mount.slot)
+        mp        = try(mount.mp, try(mount.guest_path, null))
+        storage   = try(mount.storage, ct.storage.rootfs_storage)
+        size      = try(mount.size, try(mount.size_gb, null) == null ? null : format("%sG", mount.size_gb))
+        backup    = try(mount.backup, false)
+        quota     = try(mount.quota, false)
+        replicate = try(mount.replicate, false)
+        shared    = try(mount.shared, false)
+        acl       = try(mount.acl, false)
+      }
+    ]
+  }
+
+  ct_app_mounts = {
+    for name, ct in local.cts : name => [
+      for index, mp in local.ct_app_mount_candidates[name] : {
+        key       = format("mp%d", index)
+        slot      = index
+        mp        = mp
+        storage   = ct.storage.rootfs_storage
+        size      = format("%sG", ct.storage.rootfs_size_gb)
+        backup    = false
+        quota     = false
+        replicate = false
+        shared    = false
+        acl       = false
+      }
+      if mp != null && !contains([for declared in local.ct_declared_mounts[name] : declared.mp], mp)
+    ]
+  }
+
+  ct_mountpoints = {
+    for name, ct in local.cts : name => concat(local.ct_declared_mounts[name], local.ct_app_mounts[name])
+  }
+
+  ct_features = {
+    for name, ct in local.cts : name => {
+      nesting = try(ct.lxc.features.nesting, null)
+      keyctl  = try(ct.lxc.features.keyctl, try(ct.lxc.features_manual.keyctl, null))
+      fuse    = try(ct.lxc.features.fuse, try(ct.lxc.features_manual.fuse, null))
+      mknod   = try(ct.lxc.features.mknod, null)
+      mount   = try(ct.lxc.features.mount, null)
     }
   }
 

@@ -89,6 +89,18 @@ variable "searchdomain" {
   description = "DNS search domain."
 }
 
+variable "features" {
+  type = object({
+    nesting = optional(bool)
+    keyctl  = optional(bool)
+    fuse    = optional(bool)
+    mknod   = optional(bool)
+    mount   = optional(string)
+  })
+  default     = {}
+  description = "Optional LXC feature flags passed directly to proxmox_lxc."
+}
+
 variable "rootfs_storage" {
   type        = string
   description = "Root filesystem storage."
@@ -128,4 +140,21 @@ variable "network_gateway" {
   default     = null
   nullable    = true
   description = "Static gateway."
+}
+
+variable "mountpoints" {
+  type = list(object({
+    key       = string
+    slot      = number
+    mp        = string
+    storage   = optional(string)
+    size      = optional(string)
+    backup    = optional(bool)
+    quota     = optional(bool)
+    replicate = optional(bool)
+    shared    = optional(bool)
+    acl       = optional(bool)
+  }))
+  default     = []
+  description = "Additional LXC mountpoints."
 }
