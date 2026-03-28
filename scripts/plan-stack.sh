@@ -13,6 +13,7 @@ shift 2
 RUNNER_MODE=""
 RUNNER_ROOT=""
 COMPOSE_FILE=""
+DOCKER_COMPOSE_CMD=()
 
 resolve_terraform() {
   if [[ -n "${TERRAFORM_BIN:-}" && -x "${TERRAFORM_BIN}" ]]; then
@@ -59,10 +60,24 @@ resolve_compose_file() {
   return 1
 }
 
+resolve_docker_compose() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD=(docker compose)
+    return 0
+  fi
+
+  if command -v docker-compose >/dev/null 2>&1 && docker-compose --version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD=(docker-compose)
+    return 0
+  fi
+
+  return 1
+}
+
 if TERRAFORM_BIN="$(resolve_terraform)"; then
   RUNNER_MODE="local"
   RUNNER_ROOT="$ROOT_DIR"
-elif COMPOSE_FILE="$(resolve_compose_file)" && command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+elif COMPOSE_FILE="$(resolve_compose_file)" && resolve_docker_compose; then
   RUNNER_MODE="docker-compose"
   RUNNER_ROOT="/workspace"
 else
@@ -169,7 +184,7 @@ run_terraform() {
     return 0
   fi
 
-  docker compose -f "$COMPOSE_FILE" run --rm -T -v "$ROOT_DIR:/workspace" terraform "$@"
+  "${DOCKER_COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" run --rm -T -v "$ROOT_DIR:/workspace" terraform "$@"
 }
 
 if [[ "$STACK" == "proxmox-base" ]]; then
