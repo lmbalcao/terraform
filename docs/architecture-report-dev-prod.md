@@ -183,7 +183,7 @@ O que ficou efetivamente criado/configurado no Proxmox no teste real:
 O que nao ficou provado como convergido:
 
 - fim do `apply` completo com state limpo
-- reconciliacao pos-criacao pelo `terraform_data.ct_manual_features`
+- o resultado final da reconciliacao pos-criacao pelo `terraform_data.ct_manual_features` depois do bootstrap de `python3` no runtime Alpine do CT Terraform
 
 ## 5. Onde Cada Configuracao E Aplicada
 

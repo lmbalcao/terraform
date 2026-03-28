@@ -34,7 +34,7 @@ Resultado provado:
   - `ostemplate = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"`
 - neste contexto de teste, o inventario ativo nao declara `vlan` e os workloads Terraform ficam na rede `192.168.99.0/24`
 - `apply` cria fisicamente o CT `6011` e deixa-o `running` no Proxmox real
-- o `apply` ainda nao converge de ponta a ponta no runtime testado; a fase `terraform_data.ct_manual_features` continua a sair com erro apos a criacao do CT
+- a reconciliacao `terraform_data.ct_manual_features` depende de `python3`; no runtime real do CT Terraform isso passou a ser bootstrapado no proprio provisioner quando a imagem `hashicorp/terraform` nao o inclui
 
 ### `openwrt-dns`
 

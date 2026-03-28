@@ -2,30 +2,38 @@ version: 1
 kind: vm
 enabled: false
 vmid: 1780
-name: vm-template
+name: rdtclient
 node: dev-proxmox
-tags: []
+tags:
+  - 60-servicos-externos
 network:
-  segment: vlan-17
+  segment: vlan-99
   mode: static
   address: 192.168.99.80/24
   gateway: 192.168.99.1
 resources:
-  cpu_cores: 2
+  cpu_cores: 1
   cpu_sockets: 1
   memory_mb: 1024
 boot:
-  on_boot: true
+  on_boot: false
   start_state: running
 storage:
-  rootfs_storage: local
-  rootfs_size_gb: 8
+  rootfs_storage: local-lvm
+  rootfs_size_gb: 3
 qemu:
   sockets: 1
   agent_enabled: false
-  source: {}
+  kvm_enabled: false
+  scsi_hardware: virtio-scsi-pci
   disks: []
-services: []
+services:
+  - name: rdtclient
+    scheme: http
+    port: 6500
+    traefik_tag: traefik-dev
+    traefik_label: rdtclient
+    uri: rdtclient.lbtec.org
 operations:
   ansible_enabled: false
   backup_policy: null

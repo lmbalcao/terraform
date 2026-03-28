@@ -28,13 +28,17 @@ resource "proxmox_lxc" "this" {
   network {
     name   = "eth0"
     bridge = var.network_bridge
-    tag    = var.network_tag == null || var.network_tag <= 0 ? null : var.network_tag
+    tag    = try(var.network_tag > 0, false) ? var.network_tag : null
     ip     = var.network_mode == "dhcp" ? "dhcp" : var.network_ip_cidr
     gw     = var.network_mode == "dhcp" ? null : var.network_gateway
   }
 
   lifecycle {
-    ignore_changes = [password]
+    ignore_changes = [
+      ostemplate,
+      password,
+      rootfs[0].storage,
+    ]
 
     precondition {
       condition     = var.network_mode == "dhcp" || (var.network_ip_cidr != null && var.network_gateway != null)

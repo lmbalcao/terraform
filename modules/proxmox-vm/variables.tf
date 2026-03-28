@@ -35,6 +35,24 @@ variable "memory_mb" {
   description = "Memory in MB."
 }
 
+variable "ci_user" {
+  type        = string
+  default     = "root"
+  description = "Cloud-init user configured for the guest."
+}
+
+variable "kvm_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to enable hardware virtualization for the guest."
+}
+
+variable "scsi_hardware" {
+  type        = string
+  default     = "lsi"
+  description = "SCSI controller model."
+}
+
 variable "start_at_node_boot" {
   type        = bool
   description = "Start VM on node boot."
@@ -62,6 +80,32 @@ variable "network_address" {
   default     = null
   nullable    = true
   description = "Desired guest address metadata."
+}
+
+variable "network_gateway" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Desired guest gateway metadata."
+}
+
+variable "network_mode" {
+  type        = string
+  description = "Network mode: static or dhcp."
+}
+
+variable "nameserver" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Primary nameserver."
+}
+
+variable "searchdomain" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "DNS search domain."
 }
 
 variable "rootfs_storage" {

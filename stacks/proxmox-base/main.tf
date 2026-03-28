@@ -119,6 +119,10 @@ resource "terraform_data" "ct_manual_features" {
 
   provisioner "local-exec" {
     command     = <<-EOT
+      if ! command -v python3 >/dev/null 2>&1; then
+        apk add --no-cache python3 >/dev/null
+      fi
+
       set -- \
         python3 \
         ${path.root}/../../scripts/apply-proxmox-ct-features.py \
@@ -182,13 +186,19 @@ module "vms" {
   cpu_cores   = each.value.resources.cpu_cores
   cpu_sockets = try(each.value.resources.cpu_sockets, try(each.value.qemu.sockets, 1))
   memory_mb   = each.value.resources.memory_mb
+  kvm_enabled = try(each.value.qemu.kvm_enabled, true)
+  scsi_hardware = try(each.value.qemu.scsi_hardware, "lsi")
 
   start_at_node_boot = each.value.boot.on_boot
   vm_state           = each.value.boot.start_state
 
   network_bridge  = each.value.network.bridge
   network_tag     = try(each.value.network.vlan, null)
+  network_mode    = each.value.network.mode
   network_address = try(each.value.network.address, null)
+  network_gateway = try(each.value.network.gateway, null)
+  nameserver      = try(length(each.value.network.dns_servers) > 0 ? each.value.network.dns_servers[0] : null, null)
+  searchdomain    = try(each.value.network.dns_domain, null)
 
   rootfs_storage = each.value.storage.rootfs_storage
   rootfs_size_gb = each.value.storage.rootfs_size_gb

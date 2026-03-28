@@ -2,8 +2,8 @@ version: 1
 kind: ct
 enabled: true
 vmid: 6011
-name: homarr
-hostname: homarr
+name: wikijs
+hostname: wikijs
 node: dev-proxmox
 tags:
   - 60-servicos-externos
@@ -26,7 +26,13 @@ lxc:
   features:
     nesting: true
   mounts: []
-services: []
+services:
+  - name: wikijs
+    scheme: http
+    port: 80
+    traefik_tag: traefik-dev
+    traefik_label: wikijs
+    uri: wikijs.lbtec.org
 operations:
   ansible_enabled: false
   backup_policy: null
