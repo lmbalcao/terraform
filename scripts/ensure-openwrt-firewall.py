@@ -125,6 +125,7 @@ class OpenWrtClient:
         host: str,
         user: str,
         password: str,
+        private_key_path: str | None = None,
         port: int = 22,
         scheme: str = "http",
         tls_insecure: bool = True,
@@ -132,11 +133,38 @@ class OpenWrtClient:
         self.host = host
         self.user = user
         self.password = password
+        self.private_key_path = private_key_path
         self.port = port
         self.scheme = scheme
         self.tls_insecure = tls_insecure
 
     def _run_remote(self, command: list[str]) -> ExecResult:
+        if self.private_key_path:
+            completed = subprocess.run(
+                [
+                    "ssh",
+                    "-i",
+                    self.private_key_path,
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-o",
+                    "PreferredAuthentications=publickey",
+                    "-p",
+                    str(self.port),
+                    f"{self.user}@{self.host}",
+                    shlex.join(command),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            return ExecResult(
+                code=completed.returncode,
+                stdout=(completed.stdout or "").strip(),
+                stderr=(completed.stderr or "").strip(),
+            )
+
         askpass_path = None
         try:
             with tempfile.NamedTemporaryFile("w", delete=False, prefix="openwrt-askpass-", suffix=".sh") as handle:
@@ -289,6 +317,11 @@ def parse_args() -> argparse.Namespace:
         "--openwrt-password",
         default=os.environ.get("OPENWRT_PASSWORD"),
         help="OpenWrt LuCI password. Defaults to OPENWRT_PASSWORD.",
+    )
+    parser.add_argument(
+        "--openwrt-private-key-path",
+        default=os.environ.get("OPENWRT_SSH_PRIVATE_KEY_PATH"),
+        help="Optional SSH private key path used instead of password auth. Defaults to OPENWRT_SSH_PRIVATE_KEY_PATH.",
     )
     parser.add_argument(
         "--openwrt-port",
@@ -872,12 +905,15 @@ def build_desired_rules(
 
 
 def load_openwrt_client(args: argparse.Namespace) -> OpenWrtClient:
-    if not args.openwrt_host or not args.openwrt_password:
-        raise SystemExit("OpenWrt host and password are required for firewall reconciliation.")
+    if not args.openwrt_host:
+        raise SystemExit("OpenWrt host is required for firewall reconciliation.")
+    if not args.openwrt_private_key_path and not args.openwrt_password:
+        raise SystemExit("Provide either an OpenWrt SSH private key path or an OpenWrt password for firewall reconciliation.")
     return OpenWrtClient(
         host=args.openwrt_host,
         user=args.openwrt_user,
         password=args.openwrt_password,
+        private_key_path=args.openwrt_private_key_path,
         port=args.openwrt_port,
         scheme=args.openwrt_scheme,
         tls_insecure=args.openwrt_tls_insecure,
@@ -942,7 +978,7 @@ def reconcile_rules(
 
 def main() -> int:
     args = parse_args()
-    if not args.plan_only and (not args.openwrt_host or not args.openwrt_password):
+    if not args.plan_only and (not args.openwrt_host or (not args.openwrt_password and not args.openwrt_private_key_path)):
         print(
             "OpenWrt connection details are required unless --plan-only is used.",
             file=sys.stderr,
