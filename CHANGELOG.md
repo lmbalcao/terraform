@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.2.1] - 2026-03-28
+## [v2.2.2] - 2026-03-28
 
-- chore: normalize repository hygiene
+- docs(repo): sync operational docs with current behavior
 
 ## [v2.0.11] - 2026-03-23
 
