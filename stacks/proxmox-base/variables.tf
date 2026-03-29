@@ -112,7 +112,13 @@ variable "docker_apps_root" {
   type        = string
   default     = null
   nullable    = true
-  description = "Optional path to the docker apps repository used to derive CT mountpoints from app docker-compose files."
+  description = "Optional local override root used mainly for tests; when null, app docker-compose files are fetched from the canonical remote repository."
+}
+
+variable "compose_source_base_url" {
+  type        = string
+  default     = "https://raw.githubusercontent.com/lmbalcao/docker/main"
+  description = "Canonical base URL used to resolve app docker-compose.yml files when docker_apps_root is null."
 }
 
 variable "proxmox_ssh_host" {
@@ -139,4 +145,23 @@ variable "proxmox_ssh_private_key_path" {
   default     = null
   nullable    = true
   description = "Optional private key path used for CT feature reconciliation over SSH."
+}
+
+variable "guest_ssh_user" {
+  type        = string
+  default     = "root"
+  description = "SSH user used to prepare app bind-mount paths inside VMs."
+}
+
+variable "guest_ssh_port" {
+  type        = number
+  default     = 22
+  description = "SSH port used to prepare app bind-mount paths inside VMs."
+}
+
+variable "guest_ssh_private_key_path" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Private key path used to prepare app bind-mount paths inside VMs. Required when enabled VMs declare apps."
 }

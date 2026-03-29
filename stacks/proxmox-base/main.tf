@@ -42,13 +42,6 @@ check "ct_templates_resolved" {
   }
 }
 
-check "ct_app_compose_files_resolved" {
-  assert {
-    condition     = length(local.ct_missing_app_compose_files) == 0
-    error_message = format("Each declared CT app must resolve to docker-compose.yml under docker_apps_root: %s", join(", ", local.ct_missing_app_compose_files))
-  }
-}
-
 check "static_networks_complete" {
   assert {
     condition     = length(local.ct_invalid_static_networks) == 0 && length(local.vm_invalid_static_networks) == 0

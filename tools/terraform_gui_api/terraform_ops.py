@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import re
+import subprocess
+from pathlib import Path
+from typing import Any
+
+
+def _run(repo_root: Path, args: list[str]) -> dict[str, Any]:
+    completed = subprocess.run(
+        args,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    raw_output = ((completed.stdout or "") + (completed.stderr or "")).strip()
+    return {
+        "command": args,
+        "exit_code": completed.returncode,
+        "raw_output": raw_output,
+    }
+
+
+def summarize_plan_output(raw_output: str) -> dict[str, Any]:
+    if "No changes." in raw_output:
+        return {"status": "no_changes", "line": "No changes."}
+
+    match = re.search(r"Plan:\s+(\d+)\s+to add,\s+(\d+)\s+to change,\s+(\d+)\s+to destroy\.", raw_output)
+    if match:
+        return {
+            "status": "changes",
+            "add": int(match.group(1)),
+            "change": int(match.group(2)),
+            "destroy": int(match.group(3)),
+        }
+
+    return {"status": "unknown", "line": next((line for line in reversed(raw_output.splitlines()) if line.strip()), "")}
+
+
+def summarize_apply_output(raw_output: str) -> dict[str, Any]:
+    match = re.search(r"Apply complete!\s+Resources:\s+(\d+)\s+added,\s+(\d+)\s+changed,\s+(\d+)\s+destroyed\.", raw_output)
+    if match:
+        return {
+            "status": "applied",
+            "add": int(match.group(1)),
+            "change": int(match.group(2)),
+            "destroy": int(match.group(3)),
+        }
+
+    if "No changes." in raw_output:
+        return {"status": "no_changes", "line": "No changes."}
+
+    return {"status": "unknown", "line": next((line for line in reversed(raw_output.splitlines()) if line.strip()), "")}
+
+
+def run_plan(repo_root: Path, environment: str) -> dict[str, Any]:
+    result = _run(repo_root, ["bash", "scripts/plan-stack.sh", "proxmox-base", environment, "-no-color"])
+    result["summary"] = summarize_plan_output(result["raw_output"])
+    return result
+
+
+def run_apply(repo_root: Path, environment: str) -> dict[str, Any]:
+    result = _run(repo_root, ["bash", "scripts/apply-stack.sh", "proxmox-base", environment, "-no-color"])
+    result["summary"] = summarize_apply_output(result["raw_output"])
+    return result
+

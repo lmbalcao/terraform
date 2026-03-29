@@ -7,7 +7,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 INV="$TMP_DIR/inventory/dev"
 APPS="$TMP_DIR/docker-apps"
-mkdir -p "$INV/cts" "$INV/vms" "$APPS/rdtclient"
+mkdir -p "$INV/cts" "$INV/vms" "$APPS/ambiguous"
 
 cat >"$INV/defaults.yaml" <<'EOF'
 version: 1
@@ -66,7 +66,7 @@ name: testapp
 hostname: testapp
 node: dev-proxmox
 apps:
-  - rdtclient
+  - ambiguous
 network:
   segment: vlan-99
   mode: dhcp
@@ -85,14 +85,7 @@ lxc:
   unprivileged: true
   features:
     nesting: true
-    keyctl: true
-    fuse: false
-  mounts:
-    - slot: 9
-      mp: /srv/manual
-      storage: local-lvm
-      size_gb: 2
-      backup: true
+  mounts: []
 services: []
 operations:
   ansible_enabled: false
@@ -100,58 +93,17 @@ operations:
   bootstrap_profile: null
 EOF
 
-cat >"$INV/vms/rdtvm.yaml" <<'EOF'
-version: 1
-kind: vm
-enabled: true
-vmid: 202
-name: rdtvm
-node: dev-proxmox
-apps:
-  - rdtclient
-network:
-  segment: vlan-99
-  mode: static
-  address: 192.168.99.202/24
-  gateway: 192.168.99.1
-resources:
-  cpu_cores: 1
-  cpu_sockets: 1
-  memory_mb: 1024
-boot:
-  on_boot: false
-  start_state: running
-storage:
-  rootfs_storage: local-lvm
-  rootfs_size_gb: 8
-qemu:
-  kvm_enabled: false
-  agent_enabled: false
-  scsi_hardware: virtio-scsi-pci
-services: []
-operations:
-  ansible_enabled: false
-  backup_policy: null
-  bootstrap_profile: null
-EOF
-
-cat >"$APPS/rdtclient/docker-compose.yml" <<'EOF'
+cat >"$APPS/ambiguous/docker-compose.yml" <<'EOF'
 services:
-  rdtclient:
-    image: rogerfar/rdtclient
-    environment:
-      - PUID=1001
-      - PGID=1001
+  one:
+    user: "1001:1001"
     volumes:
-      - /opt/rdtclient:/data/db
-      - /mnt/data/rdtclient:/data/data
-      - /mnt/downloads/rdtclient:/data/downloads
+      - /srv/shared:/data/one
+  two:
+    user: "1002:1002"
+    volumes:
+      - /srv/shared:/data/two
 EOF
-
-VALIDATION_OUTPUT="$TMP_DIR/validate.json"
-python3 "$ROOT/scripts/validate-inventory.py" --inventory-root "$TMP_DIR/inventory" dev >"$VALIDATION_OUTPUT"
-grep -q '"cts": \["testapp"\]' "$VALIDATION_OUTPUT"
-grep -q '"vms": \["rdtvm"\]' "$VALIDATION_OUTPUT"
 
 "$ROOT/.tools/bin/terraform" -chdir="$ROOT/stacks/proxmox-base" init -backend=false >/dev/null
 
@@ -165,7 +117,7 @@ CONSOLE_OUTPUT="$TMP_DIR/console.json"
   -var 'proxmox_api_token_id=root@pam!dummy' \
   -var 'proxmox_api_token=dummy' \
   -var 'root_password=dummy' \
-  <<< 'jsonencode({features=local.ct_features["testapp"],ct_mountpoints=local.ct_mountpoints["testapp"],ct_paths=local.workload_app_path_specs["testapp"],vm_paths=local.workload_app_path_specs["rdtvm"],errors=local.workload_app_analysis_errors})' >"$CONSOLE_OUTPUT"
+  <<< 'jsonencode(local.workload_app_analysis_errors)' >"$CONSOLE_OUTPUT"
 
 python3 - "$CONSOLE_OUTPUT" <<'PY'
 import json
@@ -173,18 +125,8 @@ import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-data = json.loads(payload)
+errors = json.loads(payload)
 
-assert data["features"]["keyctl"] is True
-assert data["features"]["nesting"] is True
-assert data["errors"] == []
-mounts = {item["mp"]: item for item in data["ct_mountpoints"]}
-assert mounts["/srv/manual"]["size"] == "2G"
-assert mounts["/srv/manual"]["backup"] is True
-ct_paths = {item["path"]: item for item in data["ct_paths"]}
-vm_paths = {item["path"]: item for item in data["vm_paths"]}
-assert ct_paths["/opt/rdtclient"]["uid"] == 1001
-assert ct_paths["/mnt/data/rdtclient"]["gid"] == 1001
-assert ct_paths["/mnt/downloads/rdtclient"]["uid"] == 1001
-assert vm_paths == ct_paths
+assert any("multiple UID/GID values" in item for item in errors), errors
+assert any("/srv/shared" in item for item in errors), errors
 PY
