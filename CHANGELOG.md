@@ -58,10 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.2.3] - 2026-03-28
+## [v2.3.0] - 2026-03-29
 
-- Integrate OpenWrt provider override and Traefik Proxmox prep
-- chore(repo): remove .claude and .codex scaffolding
+- feat: add terraform-gui-api with Proxmox integration
 
 ## [v2.0.11] - 2026-03-23
 
