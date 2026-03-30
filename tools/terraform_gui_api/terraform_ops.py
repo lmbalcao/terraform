@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -7,8 +8,10 @@ from typing import Any
 
 
 def _run(repo_root: Path, args: list[str]) -> dict[str, Any]:
+    container = os.environ.get("TERRAFORM_CONTAINER", "").strip()
+    effective_args = ["docker", "exec", container] + args if container else args
     completed = subprocess.run(
-        args,
+        effective_args,
         cwd=repo_root,
         text=True,
         capture_output=True,
