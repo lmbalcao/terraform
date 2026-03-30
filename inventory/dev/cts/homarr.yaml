@@ -2,9 +2,9 @@ version: 1
 kind: ct
 enabled: true
 vmid: null
-name: wikijs
-hostname: wikijs
-node: nas
+name: homarr
+hostname: homarr
+node: 2core
 tags:
   - 99-terra-dev
 network:
@@ -19,7 +19,7 @@ boot:
   start: true
 storage:
   rootfs_storage: ceph-rdb
-  rootfs_size_gb: 4
+  rootfs_size_gb: 8
 lxc:
   template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
   unprivileged: true
@@ -28,14 +28,14 @@ lxc:
   mounts:
     - slot: 0
       mp: /mnt/data
-      storage: /mnt/pve/nas1/data/dev/wikijs
+      storage: /mnt/pve/nas1/data/dev/homarr
 services:
-  - name: wikijs
+  - name: homarr
     scheme: http
     port: 80
     traefik_tag: traefik-ext
-    traefik_label: wikijs
-    uri: wikijs.lbtec.org
+    traefik_label: homarr
+    uri: homarr.lbtec.org
 operations:
   ansible_enabled: false
   backup_policy: null

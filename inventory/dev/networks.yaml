@@ -4,16 +4,31 @@ networks:
     bridge: vmbr0
     cidr: 192.168.99.0/24
     gateway: 192.168.99.1
-    dns_servers: []
+    dns_servers:
+      - 192.168.99.1
     dns_domain: lbtec.org
-  servicos-externos:
+  vlan-35:
+    bridge: vmbr0
+    cidr: 192.168.35.0/24
+    gateway: 192.168.35.1
+    dns_servers:
+      - 192.168.99.1
+    dns_domain: lbtec.org
+  vlan-50:
+    bridge: vmbr0
+    cidr: 192.168.50.0/24
+    gateway: 192.168.50.1
+    dns_servers:
+      - 192.168.50.1
+    dns_domain: lbtec.org
+  vlan-17:
     bridge: vmbr0
     cidr: 192.168.99.0/24
     gateway: 192.168.99.1
     dns_servers:
       - 192.168.99.1
     dns_domain: lbtec.org
-  vlan-17:
+  servicos-externos:
     bridge: vmbr0
     cidr: 192.168.99.0/24
     gateway: 192.168.99.1

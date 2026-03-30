@@ -2,9 +2,9 @@ version: 1
 kind: ct
 enabled: true
 vmid: null
-name: wikijs
-hostname: wikijs
-node: nas
+name: ntfy
+hostname: ntfy
+node: 2core
 tags:
   - 99-terra-dev
 network:
@@ -12,8 +12,8 @@ network:
   mode: dhcp
 resources:
   cpu_cores: 1
-  memory_mb: 2048
-  swap_mb: 1024
+  memory_mb: 512
+  swap_mb: 512
 boot:
   on_boot: true
   start: true
@@ -28,14 +28,14 @@ lxc:
   mounts:
     - slot: 0
       mp: /mnt/data
-      storage: /mnt/pve/nas1/data/dev/wikijs
+      storage: /mnt/pve/nas1/data/dev/ntfy
 services:
-  - name: wikijs
+  - name: ntfy
     scheme: http
     port: 80
-    traefik_tag: traefik-ext
-    traefik_label: wikijs
-    uri: wikijs.lbtec.org
+    traefik_tag: traefik-int
+    traefik_label: ntfy
+    uri: ntfy.lbtec.org
 operations:
   ansible_enabled: false
   backup_policy: null

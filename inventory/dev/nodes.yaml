@@ -2,3 +2,11 @@ version: 1
 nodes:
   dev-proxmox:
     role: compute
+  4core:
+    role: compute
+  2core:
+    role: compute
+  n100:
+    role: compute
+  nas:
+    role: compute

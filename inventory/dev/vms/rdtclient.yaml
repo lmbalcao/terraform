@@ -1,16 +1,14 @@
 version: 1
 kind: vm
 enabled: false
-vmid: 1780
-name: rdtclient
-node: dev-proxmox
+vmid: null
+name: terra-teste-vm
+node: n100
 tags:
-  - 60-servicos-externos
+  - 99-terra-dev
 network:
   segment: vlan-99
-  mode: static
-  address: 192.168.99.80/24
-  gateway: 192.168.99.1
+  mode: dhcp
 resources:
   cpu_cores: 1
   cpu_sockets: 1
@@ -19,7 +17,7 @@ boot:
   on_boot: false
   start_state: running
 storage:
-  rootfs_storage: local-lvm
+  rootfs_storage: local
   rootfs_size_gb: 3
 qemu:
   sockets: 1
@@ -27,13 +25,7 @@ qemu:
   kvm_enabled: false
   scsi_hardware: virtio-scsi-pci
   disks: []
-services:
-  - name: rdtclient
-    scheme: http
-    port: 6500
-    traefik_tag: traefik-dev
-    traefik_label: rdtclient
-    uri: rdtclient.lbtec.org
+services: []
 operations:
   ansible_enabled: false
   backup_policy: null

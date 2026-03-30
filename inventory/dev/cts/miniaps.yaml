@@ -2,24 +2,24 @@ version: 1
 kind: ct
 enabled: true
 vmid: null
-name: wikijs
-hostname: wikijs
-node: nas
+name: miniaps
+hostname: miniaps
+node: n100
 tags:
   - 99-terra-dev
 network:
   segment: vlan-99
   mode: dhcp
 resources:
-  cpu_cores: 1
-  memory_mb: 2048
+  cpu_cores: 2
+  memory_mb: 4096
   swap_mb: 1024
 boot:
   on_boot: true
   start: true
 storage:
   rootfs_storage: ceph-rdb
-  rootfs_size_gb: 4
+  rootfs_size_gb: 32
 lxc:
   template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
   unprivileged: true
@@ -28,14 +28,14 @@ lxc:
   mounts:
     - slot: 0
       mp: /mnt/data
-      storage: /mnt/pve/nas1/data/dev/wikijs
+      storage: /mnt/pve/nas1/data/dev/miniaps
 services:
-  - name: wikijs
+  - name: miniaps
     scheme: http
     port: 80
-    traefik_tag: traefik-ext
-    traefik_label: wikijs
-    uri: wikijs.lbtec.org
+    traefik_tag: traefik-dev
+    traefik_label: miniaps
+    uri: miniaps.lbtec.org
 operations:
   ansible_enabled: false
   backup_policy: null

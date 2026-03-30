@@ -2,24 +2,26 @@ version: 1
 kind: ct
 enabled: true
 vmid: null
-name: wikijs
-hostname: wikijs
-node: nas
+name: forgejo
+hostname: forgejo
+node: 4core
 tags:
   - 99-terra-dev
 network:
   segment: vlan-99
-  mode: dhcp
+  mode: static
+  address: 192.168.99.22/24
+  gateway: 192.168.99.1
 resources:
-  cpu_cores: 1
-  memory_mb: 2048
+  cpu_cores: 2
+  memory_mb: 1024
   swap_mb: 1024
 boot:
   on_boot: true
   start: true
 storage:
   rootfs_storage: ceph-rdb
-  rootfs_size_gb: 4
+  rootfs_size_gb: 12
 lxc:
   template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
   unprivileged: true
@@ -28,14 +30,14 @@ lxc:
   mounts:
     - slot: 0
       mp: /mnt/data
-      storage: /mnt/pve/nas1/data/dev/wikijs
+      storage: /mnt/pve/nas1/data/dev/forgejo
 services:
-  - name: wikijs
+  - name: forgejo
     scheme: http
-    port: 80
-    traefik_tag: traefik-ext
-    traefik_label: wikijs
-    uri: wikijs.lbtec.org
+    port: 3000
+    traefik_tag: traefik-int
+    traefik_label: forgejo
+    uri: forgejo.lbtec.org
 operations:
   ansible_enabled: false
   backup_policy: null
