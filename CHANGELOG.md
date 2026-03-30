@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.3.0] - 2026-03-29
+## [v2.4.0] - 2026-03-30
 
-- feat: add terraform-gui-api with Proxmox integration
+- feat: add TERRAFORM_CONTAINER support to terraform_ops
 
 ## [v2.0.11] - 2026-03-23
 
