@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.4.0] - 2026-03-30
+## [v2.5.0] - 2026-03-30
 
-- feat: add TERRAFORM_CONTAINER support to terraform_ops
+- feat: add dev inventory — 19 CTs + fix nodes/networks
 
 ## [v2.0.11] - 2026-03-23
 
