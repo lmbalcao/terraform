@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.2] - 2026-03-31
+## [v2.5.3] - 2026-03-31
 
-- fix: correct name field in rdtclient.yaml to match filename
+- fix: allow null vmid and correct traefik instances in dev ingress
 
 ## [v2.0.11] - 2026-03-23
 
