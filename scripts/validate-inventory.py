@@ -375,7 +375,7 @@ def validate_common_workload(
 
     if "enabled" in workload:
         expect_type(workload["enabled"], bool, f"{context}.enabled", errors)
-    if "vmid" in workload:
+    if "vmid" in workload and workload["vmid"] is not None:
         expect_type(workload["vmid"], int, f"{context}.vmid", errors)
     if "name" in workload:
         expect_type(workload["name"], str, f"{context}.name", errors)
