@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.3] - 2026-03-31
+## [v2.5.4] - 2026-03-31
 
-- fix: allow null vmid and correct traefik instances in dev ingress
+- fix: update miniaps traefik_tag from traefik-dev to traefik-int
 
 ## [v2.0.11] - 2026-03-23
 
