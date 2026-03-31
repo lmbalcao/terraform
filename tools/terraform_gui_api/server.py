@@ -153,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             _json(self, HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {parsed.path}"})
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
             _json(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
 
     def do_POST(self) -> None:
@@ -298,7 +298,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             _json(self, HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {parsed.path}"})
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
             _json(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
 
 
