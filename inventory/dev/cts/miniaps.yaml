@@ -33,7 +33,7 @@ services:
   - name: miniaps
     scheme: http
     port: 80
-    traefik_tag: traefik-dev
+    traefik_tag: traefik-int
     traefik_label: miniaps
     uri: miniaps.lbtec.org
 operations:
