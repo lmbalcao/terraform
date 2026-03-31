@@ -2,7 +2,7 @@ version: 1
 kind: vm
 enabled: false
 vmid: null
-name: terra-teste-vm
+name: rdtclient
 node: n100
 tags:
   - 99-terra-dev
