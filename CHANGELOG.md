@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.1] - 2026-03-31
+## [v2.5.2] - 2026-03-31
 
-- fix: catch SystemExit in HTTP handlers to prevent connection drops
+- fix: correct name field in rdtclient.yaml to match filename
 
 ## [v2.0.11] - 2026-03-23
 
