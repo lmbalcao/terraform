@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.0] - 2026-03-30
+## [v2.5.1] - 2026-03-31
 
-- feat: add dev inventory — 19 CTs + fix nodes/networks
+- fix: catch SystemExit in HTTP handlers to prevent connection drops
 
 ## [v2.0.11] - 2026-03-23
 
