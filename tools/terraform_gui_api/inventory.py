@@ -417,7 +417,14 @@ def dump_yaml(value: Any, indent: int = 0) -> list[str]:
             return [prefix + "[]"]
         lines = []
         for item in value:
-            if isinstance(item, (dict, list)) and item:
+            if isinstance(item, dict) and item:
+                # Inline the first key on the same line as "- " so the custom
+                # YAML parser (which requires "- " prefix) can read it back.
+                sub = dump_yaml(item, indent + 2)
+                first_content = sub[0][indent + 2:]   # strip the extra indent
+                lines.append(f"{prefix}- {first_content}")
+                lines.extend(sub[1:])
+            elif isinstance(item, list) and item:
                 lines.append(f"{prefix}-")
                 lines.extend(dump_yaml(item, indent + 2))
             else:
