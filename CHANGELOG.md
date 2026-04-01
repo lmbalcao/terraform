@@ -58,9 +58,10 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.9] - 2026-04-01
+## [v2.5.10] - 2026-04-01
 
-- fix: always return HTTP 200 for terraform plan/apply; exit_code carries success/failure
+- fix: dump_yaml inline dict keys on list items; terraform ops always return HTTP 200
+- fix: dump_yaml inline dict keys on list items; terraform ops always return HTTP 200
 
 ## [v2.0.11] - 2026-03-23
 
