@@ -58,10 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.5] - 2026-04-01
+## [v2.5.6] - 2026-04-01
 
-- feat(terraform-gui-api): Proxmox endpoints, app listing, start/stop action
-- feat(terraform-gui-api): Proxmox endpoints, app listing, start/stop action
+- fix: docker repo candidate path (parent/docker not parent/parent/docker)
 
 ## [v2.0.11] - 2026-03-23
 
