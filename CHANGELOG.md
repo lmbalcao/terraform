@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.6] - 2026-04-01
+## [v2.5.7] - 2026-04-01
 
-- fix: docker repo candidate path (parent/docker not parent/parent/docker)
+- fix(server): docker repo candidate path corrected to sibling dir
 
 ## [v2.0.11] - 2026-03-23
 
