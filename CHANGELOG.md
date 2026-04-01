@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.8] - 2026-04-01
+## [v2.5.9] - 2026-04-01
 
-- fix(inventory): dump_yaml inlines first dict key on '- ' line for custom YAML parser
+- fix: always return HTTP 200 for terraform plan/apply; exit_code carries success/failure
 
 ## [v2.0.11] - 2026-03-23
 
