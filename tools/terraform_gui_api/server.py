@@ -47,7 +47,7 @@ def _find_docker_repo(repo_root: Path) -> Path | None:
     candidates = [
         Path("/tmp/docker-repo"),           # colocado pelo dev-install.sh após fresh install
         Path("/opt/docker-repo"),           # alternativa persistente (clone manual)
-        repo_root.parent.parent / "docker", # workspace de dev local
+        repo_root.parent / "docker",          # workspace de dev local (irmão do repo terraform)
         repo_root.parent / "docker-repo",
     ]
     for path in candidates:
