@@ -487,8 +487,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/terraform/plan":
                 result = run_plan(REPO_ROOT, environment)
-                status = HTTPStatus.OK if result["exit_code"] == 0 else HTTPStatus.BAD_GATEWAY
-                _json(self, status, result)
+                _json(self, HTTPStatus.OK, result)
                 return
 
             if parsed.path == "/api/terraform/apply":
@@ -501,8 +500,7 @@ class Handler(BaseHTTPRequestHandler):
                     )
                     return
                 result = run_apply(REPO_ROOT, environment)
-                status = HTTPStatus.OK if result["exit_code"] == 0 else HTTPStatus.BAD_GATEWAY
-                _json(self, status, result)
+                _json(self, HTTPStatus.OK, result)
                 return
 
             _json(self, HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {parsed.path}"})
