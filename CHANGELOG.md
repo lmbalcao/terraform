@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.7] - 2026-04-01
+## [v2.5.8] - 2026-04-01
 
-- fix(server): docker repo candidate path corrected to sibling dir
+- fix(inventory): dump_yaml inlines first dict key on '- ' line for custom YAML parser
 
 ## [v2.0.11] - 2026-03-23
 
