@@ -168,3 +168,60 @@ def get_real_workload_detail(
         "config": config,
         "status": status,
     }
+
+
+def list_nodes(credentials: ProxmoxCredentials) -> list[dict[str, Any]]:
+    response = api_request(credentials, "GET", "/nodes")
+    return sorted(
+        [
+            {"node": item["node"], "status": item.get("status", "unknown")}
+            for item in response.get("data", [])
+            if isinstance(item, dict) and item.get("node")
+        ],
+        key=lambda x: x["node"],
+    )
+
+
+def list_node_storages(credentials: ProxmoxCredentials, node: str) -> list[dict[str, Any]]:
+    quoted_node = urllib.parse.quote(node, safe="")
+    response = api_request(credentials, "GET", f"/nodes/{quoted_node}/storage")
+    result = []
+    for item in response.get("data", []):
+        if not isinstance(item, dict):
+            continue
+        content_types = [c.strip() for c in str(item.get("content", "")).split(",") if c.strip()]
+        result.append({
+            "storage": item.get("storage", ""),
+            "type": item.get("type", ""),
+            "content": content_types,
+            "active": bool(item.get("active", 1)),
+            "supports_rootfs": "rootdir" in content_types,
+            "supports_templates": "vztmpl" in content_types,
+        })
+    return sorted(result, key=lambda s: s["storage"])
+
+
+def list_node_templates(credentials: ProxmoxCredentials, node: str, storage: str) -> list[str]:
+    quoted_node = urllib.parse.quote(node, safe="")
+    quoted_storage = urllib.parse.quote(storage, safe="")
+    response = api_request(credentials, "GET", f"/nodes/{quoted_node}/storage/{quoted_storage}/content?content=vztmpl")
+    return sorted(
+        item["volid"]
+        for item in response.get("data", [])
+        if isinstance(item, dict) and item.get("volid")
+    )
+
+
+def set_workload_status(
+    credentials: ProxmoxCredentials,
+    *,
+    node: str,
+    vmid: int,
+    kind: str,
+    action: str,
+) -> dict[str, Any]:
+    if action not in ("start", "stop"):
+        raise ValueError(f"Invalid action: {action!r}. Must be 'start' or 'stop'.")
+    resource_kind = "lxc" if kind == "ct" else "qemu"
+    quoted_node = urllib.parse.quote(node, safe="")
+    return api_request(credentials, "POST", f"/nodes/{quoted_node}/{resource_kind}/{vmid}/status/{action}")
