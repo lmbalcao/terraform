@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.2] - 2026-04-02
+## [v2.7.3] - 2026-04-02
 
-- fix: create host bind-mount dirs on Proxmox before CT vzcreate
+- fix: replace coalesce with null-safe checks for proxmox_ssh_host
 
 ## [v2.0.11] - 2026-03-23
 
