@@ -11,13 +11,18 @@ from urllib.parse import urlsplit, urlunsplit
 def build_proxmox_base(manifest: dict[str, Any]) -> dict[str, Any]:
     proxmox = manifest["proxmox"]
     bootstrap = manifest["bootstrap"]
-    return {
+    result: dict[str, Any] = {
         "proxmox_api_url": proxmox["api_url"],
-        "proxmox_api_token_id": proxmox["api_token_id"],
-        "proxmox_api_token": proxmox["api_token"],
+        "proxmox_password": proxmox["password"],
         "proxmox_tls_insecure": bool(proxmox.get("tls_insecure", False)),
         "root_password": bootstrap["root_password"],
     }
+    # Include token fields when present so terraform-gui direct API calls still work.
+    if proxmox.get("api_token_id"):
+        result["proxmox_api_token_id"] = proxmox["api_token_id"]
+    if proxmox.get("api_token"):
+        result["proxmox_api_token"] = proxmox["api_token"]
+    return result
 
 
 def build_openwrt_dns(manifest: dict[str, Any]) -> dict[str, Any]:

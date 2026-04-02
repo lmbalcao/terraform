@@ -15,6 +15,9 @@ FALSE_VALUES = {"0", "false", "no", "off", ""}
 PLACEHOLDERS = {
     "REPLACE_ME",
     "<proxmox-api-url>",
+    "<proxmox-root-password>",
+    # Legacy token placeholders kept so old tfvars files with placeholders are
+    # still caught rather than silently accepted as real values.
     "<proxmox-user@realm!token-name>",
     "<proxmox-api-token-id>",
     "<proxmox-api-token-secret>",
@@ -24,8 +27,7 @@ PLACEHOLDERS = {
 @dataclass(frozen=True)
 class ProxmoxCredentials:
     api_url: str
-    token_id: str
-    token_secret: str
+    password: str
     tls_insecure: bool
 
 
@@ -69,23 +71,21 @@ def load_proxmox_credentials(repo_root: Path, environment: str) -> tuple[Proxmox
             continue
         payload = _parse_tfvars(path)
         api_url = str(payload.get("proxmox_api_url") or "").strip()
-        token_id = str(payload.get("proxmox_api_token_id") or "").strip()
-        token_secret = str(payload.get("proxmox_api_token") or "").strip()
+        password = str(payload.get("proxmox_password") or "").strip()
         tls_insecure = bool(payload.get("proxmox_tls_insecure", True))
-        if api_url in PLACEHOLDERS or token_id in PLACEHOLDERS or token_secret in PLACEHOLDERS:
+        if api_url in PLACEHOLDERS or password in PLACEHOLDERS:
             continue
-        if api_url and token_id and token_secret:
+        if api_url and password:
             return (
                 ProxmoxCredentials(
                     api_url=api_url,
-                    token_id=token_id,
-                    token_secret=token_secret,
+                    password=password,
                     tls_insecure=tls_insecure,
                 ),
                 None,
             )
 
-    return None, f"Missing env/{environment}/proxmox-base.tfvars(.json) with non-placeholder Proxmox credentials."
+    return None, f"Missing env/{environment}/proxmox-base.tfvars(.json) with non-placeholder Proxmox credentials (proxmox_api_url + proxmox_password)."
 
 
 def _make_context(tls_insecure: bool) -> ssl.SSLContext | None:
@@ -97,16 +97,46 @@ def _make_context(tls_insecure: bool) -> ssl.SSLContext | None:
     return context
 
 
+def _get_ticket(credentials: ProxmoxCredentials) -> tuple[str, str]:
+    """Authenticate with root@pam password and return (ticket, csrf_token)."""
+    url = f"{credentials.api_url.rstrip('/')}/access/ticket"
+    payload = urllib.parse.urlencode({
+        "username": "root@pam",
+        "password": credentials.password,
+    }).encode("utf-8")
+    request = urllib.request.Request(url, method="POST", data=payload, headers={
+        "Content-Type": "application/x-www-form-urlencoded",
+    })
+    try:
+        with urllib.request.urlopen(request, context=_make_context(credentials.tls_insecure), timeout=30) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Proxmox ticket auth failed with HTTP {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Proxmox ticket auth failed: {exc.reason}") from exc
+
+    data = body.get("data") or {}
+    ticket = str(data.get("ticket") or "")
+    csrf_token = str(data.get("CSRFPreventionToken") or "")
+    if not ticket:
+        raise RuntimeError("Proxmox ticket auth succeeded but returned no ticket.")
+    return ticket, csrf_token
+
+
 def api_request(
     credentials: ProxmoxCredentials,
     method: str,
     path: str,
     data: dict[str, str] | None = None,
 ) -> Any:
+    ticket, csrf_token = _get_ticket(credentials)
     url = f"{credentials.api_url.rstrip('/')}/{path.lstrip('/')}"
     headers = {
-        "Authorization": f"PVEAPIToken={credentials.token_id}={credentials.token_secret}",
+        "Cookie": f"PVEAuthCookie={ticket}",
     }
+    if method != "GET":
+        headers["CSRFPreventionToken"] = csrf_token
     payload = None
     if data is not None:
         payload = urllib.parse.urlencode(data).encode("utf-8")

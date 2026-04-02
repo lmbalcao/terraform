@@ -1,7 +1,6 @@
 # Copy to env/prod/proxmox-base.tfvars only for local use and replace every placeholder.
 proxmox_api_url = "<proxmox-api-url>"
-proxmox_api_token_id = "<proxmox-user@realm!token-name>"
-proxmox_api_token = "<proxmox-api-token-secret>"
+proxmox_password = "<proxmox-root-password>"
 proxmox_tls_insecure = true
 root_password = "<ct-root-password>"
 default_search_domain = "lbtec.org"

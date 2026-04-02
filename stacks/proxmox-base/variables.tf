@@ -25,38 +25,39 @@ variable "proxmox_api_url" {
   }
 }
 
-variable "proxmox_api_token_id" {
+variable "proxmox_password" {
   type        = string
-  description = "Proxmox API token ID in the form user@realm!token-name. Can be set via tfvars or TF_VAR_proxmox_api_token_id."
+  sensitive   = true
+  description = "Proxmox root@pam password used by the provider. Required for bind-mount operations (Proxmox enforces root@pam identity at the API level)."
 
   validation {
     condition = (
-      trimspace(var.proxmox_api_token_id) != "" &&
+      trimspace(var.proxmox_password) != "" &&
       !contains([
         "REPLACE_ME",
-        "<proxmox-api-token-id>",
-        "<proxmox-user@realm!token-name>",
-      ], trimspace(var.proxmox_api_token_id))
+        "<proxmox-root-password>",
+      ], trimspace(var.proxmox_password))
     )
-    error_message = "proxmox_api_token_id must be set to a real Proxmox API token ID. Placeholder values do not validate the stack."
+    error_message = "proxmox_password must be set to the real root@pam password. Placeholder values do not validate the stack."
   }
 }
 
-variable "proxmox_api_token" {
-  type        = string
-  sensitive   = true
-  description = "Proxmox API token secret. Can be set via tfvars or TF_VAR_proxmox_api_token."
+# Kept as optional declarations so tfvars files that include these keys
+# (e.g. for terraform-gui direct API calls) do not cause Terraform errors.
+variable "proxmox_api_token_id" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = false
+  description = "Proxmox API token ID. Not used by this stack's provider (password auth is required for bind mounts); retained so GUI tfvars files remain valid."
+}
 
-  validation {
-    condition = (
-      trimspace(var.proxmox_api_token) != "" &&
-      !contains([
-        "REPLACE_ME",
-        "<proxmox-api-token-secret>",
-      ], trimspace(var.proxmox_api_token))
-    )
-    error_message = "proxmox_api_token must be set to a real Proxmox API token secret. Placeholder values do not validate the stack."
-  }
+variable "proxmox_api_token" {
+  type      = string
+  default   = null
+  nullable  = true
+  sensitive = true
+  description = "Proxmox API token secret. Not used by this stack's provider; retained so GUI tfvars files remain valid."
 }
 
 variable "proxmox_tls_insecure" {

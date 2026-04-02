@@ -245,17 +245,15 @@ EOF
 
 if [[ "$STACK" == "proxmox-base" ]]; then
   proxmox_api_url="${TF_VAR_proxmox_api_url:-$(tfvars_string_value "$STACK_VARS" "proxmox_api_url" 2>/dev/null || true)}"
-  proxmox_api_token_id="${TF_VAR_proxmox_api_token_id:-$(tfvars_string_value "$STACK_VARS" "proxmox_api_token_id" 2>/dev/null || true)}"
-  proxmox_api_token="${TF_VAR_proxmox_api_token:-$(tfvars_string_value "$STACK_VARS" "proxmox_api_token" 2>/dev/null || true)}"
+  proxmox_password="${TF_VAR_proxmox_password:-$(tfvars_string_value "$STACK_VARS" "proxmox_password" 2>/dev/null || true)}"
   root_password="${TF_VAR_root_password:-$(tfvars_string_value "$STACK_VARS" "root_password" 2>/dev/null || true)}"
 
   if ! ensure_non_placeholder "proxmox_api_url" "$proxmox_api_url" \
-    || ! ensure_non_placeholder "proxmox_api_token_id" "$proxmox_api_token_id" \
-    || ! ensure_non_placeholder "proxmox_api_token" "$proxmox_api_token" \
+    || ! ensure_non_placeholder "proxmox_password" "$proxmox_password" \
     || ! ensure_non_placeholder "root_password" "$root_password"; then
     cat >&2 <<'EOF'
 proxmox-base requires real Proxmox credentials and bootstrap secrets before terraform plan can run meaningfully.
-Provide them in env/<environment>/proxmox-base.tfvars or via TF_VAR_proxmox_api_url, TF_VAR_proxmox_api_token_id, TF_VAR_proxmox_api_token, and TF_VAR_root_password.
+Provide them in env/<environment>/proxmox-base.tfvars or via TF_VAR_proxmox_api_url, TF_VAR_proxmox_password, and TF_VAR_root_password.
 Without valid Proxmox credentials, terraform plan does not validate provider-backed behavior for this stack.
 EOF
     exit 1

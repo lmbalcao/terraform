@@ -21,6 +21,7 @@ class RenderLocalTfvarsTest(unittest.TestCase):
             },
             "proxmox": {
                 "api_url": "https://192.168.99.100:8006/api2/json",
+                "password": "proxmox-root-password",
                 "api_token_id": "root@pam!terraform-local",
                 "api_token": "proxmox-secret",
                 "tls_insecure": True,
@@ -92,6 +93,8 @@ class RenderLocalTfvarsTest(unittest.TestCase):
                 proxmox_base,
                 {
                     "proxmox_api_url": "https://192.168.99.100:8006/api2/json",
+                    "proxmox_password": "proxmox-root-password",
+                    # Optional token pass-throughs kept so GUI tfvars files remain valid.
                     "proxmox_api_token_id": "root@pam!terraform-local",
                     "proxmox_api_token": "proxmox-secret",
                     "proxmox_tls_insecure": True,

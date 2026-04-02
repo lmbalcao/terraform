@@ -56,10 +56,9 @@ check "proxmox_credentials_declared" {
   assert {
     condition = alltrue([
       trimspace(var.proxmox_api_url) != "",
-      trimspace(var.proxmox_api_token_id) != "",
-      trimspace(var.proxmox_api_token) != "",
+      trimspace(var.proxmox_password) != "",
     ])
-    error_message = "proxmox-base requires declared Proxmox credentials. Without valid Proxmox credentials, terraform plan cannot validate provider-backed behavior for this stack."
+    error_message = "proxmox-base requires proxmox_api_url and proxmox_password. Without valid Proxmox credentials, terraform plan cannot validate provider-backed behavior for this stack."
   }
 }
 
