@@ -420,6 +420,13 @@ locals {
     for name, ct in local.cts : name => concat(local.ct_declared_mounts[name], local.ct_app_mounts[name])
   }
 
+  ct_declared_host_paths = distinct(flatten([
+    for name, mounts in local.ct_declared_mounts : [
+      for mount in mounts : mount.volume
+      if mount.volume != null && startswith(tostring(mount.volume), "/")
+    ]
+  ]))
+
   workload_app_bind_entries = {
     for workload_name, workload in local.workloads : workload_name => flatten([
       for app in try(workload.apps, []) : [

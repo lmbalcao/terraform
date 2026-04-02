@@ -66,6 +66,8 @@ module "cts" {
   for_each = local.cts
   source   = "../../modules/proxmox-ct"
 
+  depends_on = [terraform_data.ct_declared_host_paths]
+
   target_node   = each.value.node
   hostname      = try(each.value.hostname, each.value.name)
   vmid          = each.value.vmid
