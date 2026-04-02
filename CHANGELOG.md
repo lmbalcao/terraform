@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.4] - 2026-04-02
+## [v2.7.5] - 2026-04-02
 
-- chore(inventory): disable all dev CTs except proxy-int and ntfy
+- fix: derive proxmox SSH host from API URL when proxmox_ssh_host is unset
 
 ## [v2.0.11] - 2026-03-23
 
