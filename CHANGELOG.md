@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.3] - 2026-04-02
+## [v2.7.4] - 2026-04-02
 
-- fix: replace coalesce with null-safe checks for proxmox_ssh_host
+- chore(inventory): disable all dev CTs except proxy-int and ntfy
 
 ## [v2.0.11] - 2026-03-23
 
