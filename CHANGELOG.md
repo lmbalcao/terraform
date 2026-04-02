@@ -58,9 +58,10 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.4] - 2026-03-31
+## [v2.5.10] - 2026-04-01
 
-- fix: update miniaps traefik_tag from traefik-dev to traefik-int
+- fix: dump_yaml inline dict keys on list items; terraform ops always return HTTP 200
+- fix: dump_yaml inline dict keys on list items; terraform ops always return HTTP 200
 
 ## [v2.0.11] - 2026-03-23
 
