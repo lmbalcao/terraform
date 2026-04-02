@@ -58,10 +58,14 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.5.10] - 2026-04-01
+## [v2.6.0] - 2026-04-02
 
+- Merge remote-tracking branch 'origin/main'
+- feat: migrate Proxmox provider from Telmate to bpg/proxmox
+- fix: downgrade telmate/proxmox to 3.0.2-rc06 to workaround LXC bind mount panic
 - fix: dump_yaml inline dict keys on list items; terraform ops always return HTTP 200
-- fix: dump_yaml inline dict keys on list items; terraform ops always return HTTP 200
+- fix(server): docker repo candidate path corrected to sibling dir
+- feat(terraform-gui-api): Proxmox node/storage/template endpoints, app listing, start/stop action
 
 ## [v2.0.11] - 2026-03-23
 
