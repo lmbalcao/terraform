@@ -1,6 +1,6 @@
 version: 1
 kind: ct
-enabled: true
+enabled: false
 vmid: null
 name: mediaserver
 hostname: mediaserver
