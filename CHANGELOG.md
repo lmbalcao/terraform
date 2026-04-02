@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.1] - 2026-04-02
+## [v2.7.2] - 2026-04-02
 
-- fix(inventory): correct storage typo ceph-rdb -> ceph-rbd in all dev CTs
+- fix: create host bind-mount dirs on Proxmox before CT vzcreate
 
 ## [v2.0.11] - 2026-03-23
 
