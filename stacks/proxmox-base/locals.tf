@@ -427,6 +427,12 @@ locals {
     ]
   ]))
 
+  proxmox_ssh_host_effective = (
+    var.proxmox_ssh_host != null && trimspace(var.proxmox_ssh_host) != ""
+    ? trimspace(var.proxmox_ssh_host)
+    : try(regex("https?://([^:/]+)", var.proxmox_api_url)[0], null)
+  )
+
   workload_app_bind_entries = {
     for workload_name, workload in local.workloads : workload_name => flatten([
       for app in try(workload.apps, []) : [

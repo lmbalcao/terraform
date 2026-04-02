@@ -22,15 +22,8 @@ check "app_compose_mounts_deterministic" {
   }
 }
 
-check "ct_host_path_runner_configured" {
-  assert {
-    condition     = length(local.ct_declared_host_paths) == 0 || (var.proxmox_ssh_host != null && trimspace(var.proxmox_ssh_host) != "")
-    error_message = "CT workloads with declared bind mounts require proxmox_ssh_host to create the host directories before CT creation."
-  }
-}
-
 resource "terraform_data" "ct_declared_host_paths" {
-  count = length(local.ct_declared_host_paths) > 0 && var.proxmox_ssh_host != null && trimspace(var.proxmox_ssh_host) != "" ? 1 : 0
+  count = length(local.ct_declared_host_paths) > 0 && local.proxmox_ssh_host_effective != null ? 1 : 0
 
   triggers_replace = [sha256(join("\n", sort(local.ct_declared_host_paths)))]
 
@@ -40,7 +33,7 @@ resource "terraform_data" "ct_declared_host_paths" {
 
     environment = {
       HOST_PATHS           = join("\n", local.ct_declared_host_paths)
-      PROXMOX_SSH_HOST     = var.proxmox_ssh_host
+      PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective
       PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
       PROXMOX_SSH_USER     = var.proxmox_ssh_user
       PROXMOX_SSH_KEY_PATH = var.proxmox_ssh_private_key_path != null ? var.proxmox_ssh_private_key_path : ""
@@ -50,8 +43,8 @@ resource "terraform_data" "ct_declared_host_paths" {
 
 check "ct_app_path_preparation_runner_configured" {
   assert {
-    condition     = length(local.ct_workloads_with_app_paths) == 0 || trimspace(coalesce(var.proxmox_ssh_host, "")) != ""
-    error_message = "CT workloads with apps require proxmox_ssh_host so terraform can run pct exec and prepare compose bind-mount paths."
+    condition     = length(local.ct_workloads_with_app_paths) == 0 || local.proxmox_ssh_host_effective != null
+    error_message = "CT workloads with apps require proxmox_ssh_host (or a resolvable proxmox_api_url) so terraform can run pct exec and prepare compose bind-mount paths."
   }
 }
 
@@ -94,7 +87,7 @@ resource "terraform_data" "ct_app_paths" {
       WORKLOAD_NAME        = each.key
       WORKLOAD_VMID        = tostring(module.cts[each.key].vmid)
       WORKLOAD_PATH_LINES  = local.workload_app_path_lines[each.key]
-      PROXMOX_SSH_HOST     = coalesce(var.proxmox_ssh_host, "")
+      PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective != null ? local.proxmox_ssh_host_effective : ""
       PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
       PROXMOX_SSH_USER     = var.proxmox_ssh_user
       PROXMOX_SSH_KEY_PATH = coalesce(var.proxmox_ssh_private_key_path, "")
@@ -132,7 +125,7 @@ resource "terraform_data" "vm_app_paths" {
       WORKLOAD_NAME        = each.key
       WORKLOAD_VMID        = tostring(module.vms[each.key].vmid)
       WORKLOAD_PATH_LINES  = local.workload_app_path_lines[each.key]
-      PROXMOX_SSH_HOST     = coalesce(var.proxmox_ssh_host, "")
+      PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective != null ? local.proxmox_ssh_host_effective : ""
       PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
       PROXMOX_SSH_USER     = var.proxmox_ssh_user
       PROXMOX_SSH_KEY_PATH = coalesce(var.proxmox_ssh_private_key_path, "")
