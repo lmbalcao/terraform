@@ -22,17 +22,19 @@ check "app_compose_mounts_deterministic" {
   }
 }
 
-resource "terraform_data" "ct_declared_host_paths" {
-  count = length(local.ct_declared_host_paths) > 0 && local.proxmox_ssh_host_effective != null ? 1 : 0
+resource "terraform_data" "ct_declared_host_path" {
+  for_each = toset(
+    local.proxmox_ssh_host_effective != null ? local.ct_declared_host_paths : []
+  )
 
-  triggers_replace = [sha256(join("\n", sort(local.ct_declared_host_paths)))]
+  triggers_replace = [each.value, tostring(local.proxmox_ssh_host_effective)]
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
     command     = "${path.module}/../../scripts/create-host-paths.sh"
 
     environment = {
-      HOST_PATHS           = join("\n", local.ct_declared_host_paths)
+      HOST_PATHS           = each.value
       PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective
       PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
       PROXMOX_SSH_USER     = var.proxmox_ssh_user
