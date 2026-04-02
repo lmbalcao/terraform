@@ -1,20 +1,12 @@
-resource "proxmox_vm_qemu" "this" {
-  target_node = var.target_node
-  name        = var.name
-  tags        = length(var.tags) > 0 ? join(";", var.tags) : null
-  description = var.description
-  vmid        = var.vmid
-
-  ciuser             = var.ci_user
-  vm_state           = var.vm_state
-  start_at_node_boot = var.start_at_node_boot
-  clone              = var.source_clone
-  full_clone         = var.source_clone != null
-  kvm                = var.kvm_enabled
-  nameserver         = var.nameserver
-  searchdomain       = var.searchdomain
-  scsihw             = var.scsi_hardware
-  ipconfig0          = var.network_mode == "dhcp" ? "ip=dhcp" : "ip=${var.network_address},gw=${var.network_gateway}"
+resource "proxmox_virtual_environment_vm" "this" {
+  node_name    = var.target_node
+  vm_id        = var.vmid
+  name         = var.name
+  description  = var.description
+  tags         = length(var.tags) > 0 ? var.tags : null
+  started      = var.vm_state == "running"
+  on_boot      = var.start_at_node_boot
+  scsi_hardware = var.scsi_hardware
 
   cpu {
     cores   = var.cpu_cores
@@ -22,28 +14,58 @@ resource "proxmox_vm_qemu" "this" {
     type    = "host"
   }
 
-  memory = var.memory_mb
-
-  network {
-    id     = 0
-    model  = "virtio"
-    bridge = var.network_bridge
-    tag    = try(var.network_tag > 0, false) ? var.network_tag : null
+  memory {
+    dedicated = var.memory_mb
   }
 
-  disks {
-    scsi {
-      scsi0 {
-        disk {
-          storage = var.rootfs_storage
-          size    = "${var.rootfs_size_gb}G"
-        }
+  disk {
+    interface    = "scsi0"
+    datastore_id = var.rootfs_storage
+    size         = var.rootfs_size_gb
+    file_format  = "raw"
+    discard      = "on"
+    iothread     = true
+  }
+
+  network_device {
+    model   = "virtio"
+    bridge  = var.network_bridge
+    vlan_id = try(var.network_tag > 0, false) ? var.network_tag : null
+  }
+
+  initialization {
+    datastore_id = var.rootfs_storage
+
+    dynamic "dns" {
+      for_each = var.nameserver != null || var.searchdomain != null ? [1] : []
+      content {
+        servers = var.nameserver != null ? [var.nameserver] : []
+        domain  = var.searchdomain
       }
+    }
+
+    ip_config {
+      ipv4 {
+        address = var.network_mode == "dhcp" ? "dhcp" : var.network_address
+        gateway = var.network_mode == "dhcp" ? null : var.network_gateway
+      }
+    }
+
+    user_account {
+      username = var.ci_user
+    }
+  }
+
+  dynamic "clone" {
+    for_each = var.source_clone != null ? [var.source_clone] : []
+    content {
+      vm_id = clone.value
+      full  = true
     }
   }
 
   lifecycle {
-    ignore_changes = [sshkeys]
+    ignore_changes = [initialization]
 
     precondition {
       condition     = var.network_mode == "dhcp" || (var.network_address != null && var.network_gateway != null)

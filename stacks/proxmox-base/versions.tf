@@ -8,8 +8,8 @@ terraform {
     }
 
     proxmox = {
-      source  = "Telmate/proxmox"
-      version = "= 3.0.2-rc06"
+      source  = "bpg/proxmox"
+      version = ">= 0.66, < 1.0.0"
     }
   }
 }

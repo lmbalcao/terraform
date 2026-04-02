@@ -1,17 +1,17 @@
 output "id" {
-  value = proxmox_vm_qemu.this.id
+  value = proxmox_virtual_environment_vm.this.id
 }
 
 output "vmid" {
-  value = proxmox_vm_qemu.this.vmid
+  value = proxmox_virtual_environment_vm.this.vm_id
 }
 
 output "name" {
-  value = proxmox_vm_qemu.this.name
+  value = proxmox_virtual_environment_vm.this.name
 }
 
 output "target_node" {
-  value = proxmox_vm_qemu.this.target_node
+  value = proxmox_virtual_environment_vm.this.node_name
 }
 
 output "network_address" {

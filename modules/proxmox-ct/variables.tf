@@ -98,7 +98,7 @@ variable "features" {
     mount   = optional(string)
   })
   default     = {}
-  description = "Optional LXC feature flags passed directly to proxmox_lxc."
+  description = "Optional LXC feature flags. mount is a semicolon-delimited string (e.g. \"nfs;cifs\")."
 }
 
 variable "rootfs_storage" {
@@ -144,17 +144,16 @@ variable "network_gateway" {
 
 variable "mountpoints" {
   type = list(object({
-    key       = string
-    slot      = number
-    mp        = string
-    storage   = optional(string)
+    volume    = string
+    path      = string
     size      = optional(string)
     backup    = optional(bool)
     quota     = optional(bool)
     replicate = optional(bool)
     shared    = optional(bool)
     acl       = optional(bool)
+    read_only = optional(bool)
   }))
   default     = []
-  description = "Additional LXC mountpoints."
+  description = "Additional LXC mountpoints. For bind mounts set volume to the host path and omit size."
 }

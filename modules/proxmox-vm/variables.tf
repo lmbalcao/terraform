@@ -48,15 +48,9 @@ variable "ci_user" {
   description = "Cloud-init user configured for the guest."
 }
 
-variable "kvm_enabled" {
-  type        = bool
-  default     = true
-  description = "Whether to enable hardware virtualization for the guest."
-}
-
 variable "scsi_hardware" {
   type        = string
-  default     = "lsi"
+  default     = "virtio-scsi-single"
   description = "SCSI controller model."
 }
 
@@ -67,7 +61,7 @@ variable "start_at_node_boot" {
 
 variable "vm_state" {
   type        = string
-  description = "Desired VM state."
+  description = "Desired VM state: running or stopped."
 }
 
 variable "network_bridge" {
@@ -126,8 +120,8 @@ variable "rootfs_size_gb" {
 }
 
 variable "source_clone" {
-  type        = string
+  type        = number
   default     = null
   nullable    = true
-  description = "Optional Proxmox clone source."
+  description = "Optional Proxmox VM ID to clone from."
 }

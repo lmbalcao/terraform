@@ -84,6 +84,7 @@ module "cts" {
   nameserver      = try(length(each.value.network.dns_servers) > 0 ? each.value.network.dns_servers[0] : null, null)
   searchdomain    = try(each.value.network.dns_domain, null)
   mountpoints     = local.ct_mountpoints[each.key]
+  features        = local.ct_features[each.key]
 
   rootfs_storage = each.value.storage.rootfs_storage
   rootfs_size_gb = each.value.storage.rootfs_size_gb
@@ -93,72 +94,6 @@ module "cts" {
   network_mode    = each.value.network.mode
   network_ip_cidr = try(each.value.network.address, null)
   network_gateway = try(each.value.network.gateway, null)
-}
-
-resource "terraform_data" "ct_manual_features" {
-  for_each = local.cts_with_manual_features
-
-  input = {
-    ct_name = each.key
-    node    = module.cts[each.key].target_node
-    vmid    = module.cts[each.key].vmid
-    nesting = each.value.nesting
-    keyctl  = each.value.keyctl
-    fuse    = each.value.fuse
-  }
-
-  triggers_replace = [
-    tostring(module.cts[each.key].id),
-    sha256(jsonencode(each.value)),
-  ]
-
-  provisioner "local-exec" {
-    interpreter = ["/bin/sh", "-c"]
-    command     = <<-EOT
-      set -eu
-
-      ssh_cmd="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p '$PROXMOX_SSH_PORT'"
-
-      if [ -n "$PROXMOX_SSH_KEY_PATH" ]; then
-        ssh_cmd="$ssh_cmd -i '$PROXMOX_SSH_KEY_PATH'"
-      fi
-
-      feature_csv=""
-      if [ "$CT_NESTING" = "1" ]; then
-        feature_csv="nesting=1"
-      fi
-      if [ "$CT_KEYCTL" = "1" ]; then
-        if [ -n "$feature_csv" ]; then
-          feature_csv="$feature_csv,"
-        fi
-        feature_csv="$${feature_csv}keyctl=1"
-      fi
-      if [ "$CT_FUSE" = "1" ]; then
-        if [ -n "$feature_csv" ]; then
-          feature_csv="$feature_csv,"
-        fi
-        feature_csv="$${feature_csv}fuse=1"
-      fi
-
-      target="$${PROXMOX_SSH_USER}@$${PROXMOX_SSH_HOST}"
-      if [ -n "$feature_csv" ]; then
-        eval "$ssh_cmd '$target' \"pct set '$CT_VMID' -features '$feature_csv'\""
-      else
-        eval "$ssh_cmd '$target' \"pct set '$CT_VMID' -delete features\""
-      fi
-    EOT
-
-    environment = {
-      CT_VMID              = tostring(module.cts[each.key].vmid)
-      CT_NESTING           = each.value.nesting ? "1" : "0"
-      CT_KEYCTL            = each.value.keyctl ? "1" : "0"
-      CT_FUSE              = each.value.fuse ? "1" : "0"
-      PROXMOX_SSH_HOST     = coalesce(var.proxmox_ssh_host, "")
-      PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
-      PROXMOX_SSH_USER     = var.proxmox_ssh_user
-      PROXMOX_SSH_KEY_PATH = coalesce(var.proxmox_ssh_private_key_path, "")
-    }
-  }
 }
 
 module "vms" {
@@ -174,8 +109,7 @@ module "vms" {
   cpu_cores     = each.value.resources.cpu_cores
   cpu_sockets   = try(each.value.resources.cpu_sockets, try(each.value.qemu.sockets, 1))
   memory_mb     = each.value.resources.memory_mb
-  kvm_enabled   = try(each.value.qemu.kvm_enabled, true)
-  scsi_hardware = try(each.value.qemu.scsi_hardware, "lsi")
+  scsi_hardware = try(each.value.qemu.scsi_hardware, "virtio-scsi-single")
 
   start_at_node_boot = each.value.boot.on_boot
   vm_state           = each.value.boot.start_state

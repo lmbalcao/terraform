@@ -400,10 +400,8 @@ locals {
   ct_declared_mounts = {
     for name, ct in local.cts : name => [
       for mount in try(ct.lxc.mounts, []) : {
-        key       = try(mount.key, format("mp%d", tonumber(mount.slot)))
-        slot      = tonumber(mount.slot)
-        mp        = try(mount.mp, try(mount.guest_path, null))
-        storage   = try(mount.storage, ct.storage.rootfs_storage)
+        volume    = try(mount.volume, mount.storage, null)
+        path      = try(mount.path, mount.mp, try(mount.guest_path, null))
         size      = try(mount.size, try(mount.size_gb, null) == null ? null : format("%sG", mount.size_gb))
         backup    = try(mount.backup, false)
         quota     = try(mount.quota, false)
@@ -495,8 +493,6 @@ locals {
       mount   = try(ct.lxc.features.mount, null)
     }
   }
-
-  cts_with_manual_features = local.ct_features
 
   vm_invalid_static_networks = [
     for name, vm in local.vms : name
