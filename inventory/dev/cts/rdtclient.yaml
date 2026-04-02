@@ -18,7 +18,7 @@ boot:
   on_boot: true
   start: true
 storage:
-  rootfs_storage: ceph-rdb
+  rootfs_storage: ceph-rbd
   rootfs_size_gb: 32
 lxc:
   template: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
