@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.0] - 2026-04-02
+## [v2.7.1] - 2026-04-02
 
-- feat: switch proxmox-base provider auth to root@pam password
+- fix(inventory): correct storage typo ceph-rdb -> ceph-rbd in all dev CTs
 
 ## [v2.0.11] - 2026-03-23
 
