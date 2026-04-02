@@ -24,7 +24,7 @@ resource "proxmox_virtual_environment_vm" "this" {
     size         = var.rootfs_size_gb
     file_format  = "raw"
     discard      = "on"
-    iothread     = true
+    iothread     = var.scsi_hardware == "virtio-scsi-single"
   }
 
   network_device {

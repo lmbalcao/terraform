@@ -16,7 +16,10 @@ check "unique_names" {
 
 check "unique_vmids" {
   assert {
-    condition     = length(local.all_vmids) == length(distinct(local.all_vmids))
+    condition = (
+      length([for id in local.all_vmids : id if id != null]) ==
+      length(distinct([for id in local.all_vmids : id if id != null]))
+    )
     error_message = "Duplicate VMIDs detected across CTs and VMs."
   }
 }
