@@ -58,10 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.6.1] - 2026-04-02
+## [v2.7.0] - 2026-04-02
 
-- Merge remote-tracking branch 'origin/main'
-- fix: iothread conditional on virtio-scsi-single; unique_vmids excludes nulls
+- feat: switch proxmox-base provider auth to root@pam password
 
 ## [v2.0.11] - 2026-03-23
 
