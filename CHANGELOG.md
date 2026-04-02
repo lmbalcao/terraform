@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.5] - 2026-04-02
+## [v2.7.6] - 2026-04-02
 
-- fix: derive proxmox SSH host from API URL when proxmox_ssh_host is unset
+- fix: use for_each per host path instead of single batch count resource
 
 ## [v2.0.11] - 2026-03-23
 
