@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.7.6] - 2026-04-02
+## [v2.8.0] - 2026-04-03
 
-- fix: use for_each per host path instead of single batch count resource
+- feat: Ansible opt-backup role + validate backup_policy in inventory
 
 ## [v2.0.11] - 2026-03-23
 
