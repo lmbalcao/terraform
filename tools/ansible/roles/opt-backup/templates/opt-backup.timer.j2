@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily backup of /opt timer
+
+[Timer]
+OnCalendar={{ opt_backup_oncalendar }}
+RandomizedDelaySec={{ opt_backup_randomized_delay_sec }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily backup of /opt to /mnt/data
+After=network.target
+RequiresMountsFor={{ opt_backup_dest }}
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/opt-backup-run.sh
+StandardOutput=journal
+StandardError=journal

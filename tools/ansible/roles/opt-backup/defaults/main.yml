@@ -1,0 +1,7 @@
+---
+opt_backup_enabled: true
+opt_backup_src: /opt
+opt_backup_dest: /mnt/data/backups/opt
+opt_backup_rsync_opts: "--archive --delete --numeric-ids"
+opt_backup_oncalendar: "daily"
+opt_backup_randomized_delay_sec: "10m"

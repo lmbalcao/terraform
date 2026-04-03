@@ -1,0 +1,21 @@
+---
+# Configura backup diário de /opt para /mnt/data em todos os CTs.
+#
+# Pré-requisitos:
+#   - Os CTs devem ter /mnt/data montado (bind mount para NAS).
+#   - O campo operations.backup_policy no inventário deve ser "daily"
+#     para que o host seja incluído (filtrado pelo dynamic inventory ou
+#     pelo grupo ansible configurado via stacks/ansible).
+#
+# Utilização:
+#   ansible-playbook -i <inventory> playbooks/configure-opt-backup.yml
+#
+# Variáveis de override (--extra-vars ou group_vars):
+#   opt_backup_dest        destino do backup (default: /mnt/data/backups/opt)
+#   opt_backup_oncalendar  frequência (default: daily)
+#
+- name: Configure daily /opt backup on CTs
+  hosts: all
+  become: true
+  roles:
+    - opt-backup

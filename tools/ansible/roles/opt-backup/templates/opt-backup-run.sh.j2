@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Managed by Ansible — opt-backup role
+set -euo pipefail
+
+SRC="{{ opt_backup_src }}"
+DEST="{{ opt_backup_dest }}"
+
+if [[ ! -d "${DEST}" ]]; then
+  echo "ERROR: Backup destination ${DEST} does not exist or is not mounted." >&2
+  exit 1
+fi
+
+rsync {{ opt_backup_rsync_opts }} "${SRC}/" "${DEST}/"
+echo "$(date -Iseconds) opt-backup OK: ${SRC} → ${DEST}"

@@ -442,7 +442,13 @@ def validate_common_workload(
                 f"reuses uri `{uri}` already mapped to traefik_tag `{owner_tag}` by {owner}",
             )
 
-    require_mapping(workload.get("operations", {}), f"{context}.operations", errors)
+    ops = require_mapping(workload.get("operations", {}), f"{context}.operations", errors)
+    backup_policy = ops.get("backup_policy")
+    if backup_policy is not None:
+        _VALID_BACKUP_POLICIES = {"daily", "weekly", "none"}
+        if not isinstance(backup_policy, str) or backup_policy not in _VALID_BACKUP_POLICIES:
+            append_error(errors, f"{context}.operations.backup_policy",
+                         f"must be null or one of {sorted(_VALID_BACKUP_POLICIES)}")
     if "apps" in workload and workload["apps"] is not None:
         apps = require_list(workload["apps"], f"{context}.apps", errors)
         for index, app in enumerate(apps):

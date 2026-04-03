@@ -1,0 +1,42 @@
+---
+- name: Skip opt-backup role when disabled
+  ansible.builtin.meta: end_host
+  when: not (opt_backup_enabled | bool)
+
+- name: Ensure backup destination directory exists
+  ansible.builtin.file:
+    path: "{{ opt_backup_dest }}"
+    state: directory
+    mode: "0750"
+
+- name: Render backup script
+  ansible.builtin.template:
+    src: opt-backup-run.sh.j2
+    dest: /usr/local/sbin/opt-backup-run.sh
+    mode: "0750"
+    owner: root
+    group: root
+
+- name: Render backup systemd service
+  ansible.builtin.template:
+    src: opt-backup.service.j2
+    dest: /etc/systemd/system/opt-backup.service
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Render backup systemd timer
+  ansible.builtin.template:
+    src: opt-backup.timer.j2
+    dest: /etc/systemd/system/opt-backup.timer
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start opt-backup timer
+  ansible.builtin.systemd:
+    name: opt-backup.timer
+    enabled: true
+    state: started
