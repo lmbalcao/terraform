@@ -26,6 +26,36 @@ def discover_environments(repo_root: Path) -> list[str]:
     return module.discover_environments(repo_root / "inventory")
 
 
+def load_inventory_node_names(repo_root: Path, environment: str) -> list[str]:
+    """Fast read of node names from inventory/{env}/nodes.yaml without loading the full environment."""
+    nodes_path = repo_root / "inventory" / environment / "nodes.yaml"
+    if not nodes_path.exists():
+        return []
+    try:
+        import re as _re
+        text = nodes_path.read_text(encoding="utf-8")
+        names: list[str] = []
+        in_nodes_block = False
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped == "nodes:":
+                in_nodes_block = True
+                continue
+            if in_nodes_block:
+                indent = len(line) - len(line.lstrip())
+                if indent == 0:
+                    break  # left the nodes block
+                # Node name lines are at indent 2: "  nodename:"
+                m = _re.match(r"^\s{2}([A-Za-z0-9._-]+)\s*:", line)
+                if m:
+                    names.append(m.group(1))
+        return sorted(names)
+    except Exception:
+        return []
+
+
 def load_environment_document(repo_root: Path, environment: str) -> dict[str, Any]:
     module = load_validate_inventory_module(repo_root)
     return module.load_environment(repo_root / "inventory", environment)

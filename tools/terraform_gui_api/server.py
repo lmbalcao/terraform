@@ -20,6 +20,7 @@ from .inventory import (
     git_local_branches,
     git_switch_branch,
     load_environment_document,
+    load_inventory_node_names,
     validate_document,
     workload_file_path,
     write_workload_file,
@@ -280,11 +281,27 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/proxmox/nodes":
                 environment = _get_environment(self)
+
+                # Always load inventory nodes (available without Proxmox credentials)
+                inv_names = load_inventory_node_names(REPO_ROOT, environment)
+                inv_nodes = [{"node": n, "status": "inventory"} for n in inv_names]
+
                 credentials, error = load_proxmox_credentials(REPO_ROOT, environment)
                 if credentials is None:
-                    _json(self, HTTPStatus.SERVICE_UNAVAILABLE, {"error": error, "nodes": []})
+                    # Return inventory nodes so the form dropdown is still populated
+                    _json(self, HTTPStatus.OK, {"nodes": inv_nodes, "warning": error})
                     return
-                _json(self, HTTPStatus.OK, {"nodes": list_nodes(credentials)})
+
+                # Merge live Proxmox nodes with inventory-only nodes
+                try:
+                    live_nodes = list_nodes(credentials)
+                    live_names = {n["node"] for n in live_nodes}
+                    extra = [n for n in inv_nodes if n["node"] not in live_names]
+                    merged = sorted(live_nodes + extra, key=lambda x: x["node"])
+                    _json(self, HTTPStatus.OK, {"nodes": merged})
+                except Exception as exc:
+                    # Live API failed — fall back to inventory-only nodes
+                    _json(self, HTTPStatus.OK, {"nodes": inv_nodes, "warning": str(exc)})
                 return
             if parsed.path == "/api/proxmox/storages":
                 environment = _get_environment(self)
