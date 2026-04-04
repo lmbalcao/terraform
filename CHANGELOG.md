@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.8.0] - 2026-04-03
+## [v2.8.1] - 2026-04-04
 
-- feat: Ansible opt-backup role + validate backup_policy in inventory
+- fix(terraform-gui-api): nodes do inventário sempre disponíveis no dropdown (bug 2.1)
 
 ## [v2.0.11] - 2026-03-23
 
