@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.2] - 2026-04-05
+## [v2.12.3] - 2026-04-05
 
-- fix: handle null segment in ct/vm unknown-segment validation
+- fix: allow gateway/address from network segment when mode=static
 
 ## [v2.0.11] - 2026-03-23
 
