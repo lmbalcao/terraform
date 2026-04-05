@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.8.1] - 2026-04-04
+## [v2.8.2] - 2026-04-05
 
-- fix(terraform-gui-api): nodes do inventário sempre disponíveis no dropdown (bug 2.1)
+- feat(terraform-gui-api): editar variáveis Terraform via GUI (proxmox-base.tfvars)
 
 ## [v2.0.11] - 2026-03-23
 
