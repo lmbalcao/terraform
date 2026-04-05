@@ -336,6 +336,11 @@ class Handler(BaseHTTPRequestHandler):
                 document = load_environment_document(REPO_ROOT, environment)
                 _json(self, HTTPStatus.OK, {"environment": environment, "networks": document.get("networks", {})})
                 return
+            if parsed.path == "/api/traefik-instances":
+                environment = _get_environment(self)
+                document = load_environment_document(REPO_ROOT, environment)
+                _json(self, HTTPStatus.OK, {"environment": environment, "instances": document.get("ingress", {})})
+                return
             if parsed.path == "/api/apps/list":
                 _json(self, HTTPStatus.OK, {"apps": _list_apps(REPO_ROOT)})
                 return
