@@ -341,6 +341,19 @@ class Handler(BaseHTTPRequestHandler):
                 document = load_environment_document(REPO_ROOT, environment)
                 _json(self, HTTPStatus.OK, {"environment": environment, "instances": document.get("ingress", {})})
                 return
+            if parsed.path == "/api/terraform-pubkey":
+                import os, subprocess
+                container = os.environ.get("TERRAFORM_CONTAINER", "").strip()
+                key_path = "/terraform/config/id_ed25519"
+                cmd = (["docker", "exec", container, "ssh-keygen", "-y", "-f", key_path]
+                       if container else ["ssh-keygen", "-y", "-f", key_path])
+                try:
+                    result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=10)
+                    pubkey = result.stdout.strip()
+                    _json(self, HTTPStatus.OK, {"pubkey": pubkey})
+                except Exception as exc:
+                    _json(self, HTTPStatus.OK, {"pubkey": None, "error": str(exc)})
+                return
             if parsed.path == "/api/apps/list":
                 _json(self, HTTPStatus.OK, {"apps": _list_apps(REPO_ROOT)})
                 return
