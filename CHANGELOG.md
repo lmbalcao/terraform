@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.10.0] - 2026-04-05
+## [v2.11.0] - 2026-04-05
 
-- feat: add GET /api/terraform-pubkey endpoint
+- feat: network bridges API + remove ssh_public_keys/default_lxc_template from TFVARS_FIELDS
 
 ## [v2.0.11] - 2026-03-23
 
