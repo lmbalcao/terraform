@@ -403,8 +403,9 @@ def validate_common_workload(
     if mode not in {"static", "dhcp"}:
         append_error(errors, f"{context}.network.mode", "must be `static` or `dhcp`")
     if mode == "static":
+        segment_data = networks.get(segment, {}) if segment and networks else {}
         for key in ("address", "gateway"):
-            if not network.get(key):
+            if not network.get(key) and not segment_data.get(key):
                 append_error(errors, f"{context}.network", f"requires `{key}` when mode=static")
 
     resources = require_mapping(workload.get("resources", {}), f"{context}.resources", errors)
