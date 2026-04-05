@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.8.3] - 2026-04-05
+## [v2.8.4] - 2026-04-05
 
-- fix(proxmox-api): adicionar /api2/json ao URL base em todas as chamadas API
+- feat(api): endpoint GET /api/networks com dados completos dos segmentos de rede
 
 ## [v2.0.11] - 2026-03-23
 
