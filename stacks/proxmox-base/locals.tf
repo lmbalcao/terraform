@@ -284,8 +284,8 @@ locals {
   ct_unknown_nodes = [for name, ct in local.cts : name if !contains(keys(local.nodes), ct.node)]
   vm_unknown_nodes = [for name, vm in local.vms : name if !contains(keys(local.nodes), vm.node)]
 
-  ct_unknown_segments = [for name, ct in local.cts : name if !contains(keys(local.networks), try(ct.network.segment, ""))]
-  vm_unknown_segments = [for name, vm in local.vms : name if !contains(keys(local.networks), try(vm.network.segment, ""))]
+  ct_unknown_segments = [for name, ct in local.cts : name if try(ct.network.segment, null) != null && !contains(keys(local.networks), ct.network.segment)]
+  vm_unknown_segments = [for name, vm in local.vms : name if try(vm.network.segment, null) != null && !contains(keys(local.networks), vm.network.segment)]
 
   ct_missing_templates = [
     for name, ct in local.cts : name
