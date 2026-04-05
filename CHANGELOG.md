@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.8.4] - 2026-04-05
+## [v2.9.0] - 2026-04-05
 
-- feat(api): endpoint GET /api/networks com dados completos dos segmentos de rede
+- feat: add GET /api/traefik-instances endpoint
 
 ## [v2.0.11] - 2026-03-23
 
