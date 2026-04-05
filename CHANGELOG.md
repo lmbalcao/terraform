@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.3] - 2026-04-05
+## [v2.12.4] - 2026-04-05
 
-- fix: allow gateway/address from network segment when mode=static
+- fix: test CT inventory corrections
 
 ## [v2.0.11] - 2026-03-23
 
