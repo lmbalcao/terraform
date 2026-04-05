@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.11.3] - 2026-04-05
+## [v2.11.4] - 2026-04-05
 
-- fix: add POST /api/drafts/clear endpoint
+- fix: usar try() em ct/vm_unknown_segments para campo segment opcional
 
 ## [v2.0.11] - 2026-03-23
 
