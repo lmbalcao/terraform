@@ -1,0 +1,45 @@
+boot:
+  on_boot: true
+  start: true
+enabled: true
+hostname: testefixo
+kind: ct
+lxc:
+  features:
+    nesting: true
+  features_manual: {}
+  mounts:
+    - mp: /mnt/data
+      slot: 0
+      storage: /mnt/pve/nas1/data/dev/teste2
+  template: local:vztmpl/debian-11-standard_11.7-1_amd64.tar.zst
+  unprivileged: true
+name: testefixo
+network:
+  address: 192.168.60.123/24
+  dns_domain: lbtec.org
+  dns_servers:
+    - 192.168.60.1
+  gateway: 192.168.60.1
+  mode: static
+  segment: public
+node: 6core
+operations:
+  ansible_enabled: false
+  backup_policy: null
+  bootstrap_profile: null
+qemu:
+  agent_enabled: false
+  kvm_enabled: false
+resources:
+  cpu_cores: 1
+  memory_mb: 512
+  swap_mb: 1024
+services: []
+storage:
+  rootfs_size_gb: 1
+  rootfs_storage: ceph-rbd
+tags:
+  - testefixo
+version: 1
+vmid: null
