@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.11.2] - 2026-04-05
+## [v2.11.3] - 2026-04-05
 
-- chore: remove obsolete segment references from all CT/VM inventory files
+- fix: add POST /api/drafts/clear endpoint
 
 ## [v2.0.11] - 2026-03-23
 
