@@ -8,7 +8,6 @@ node: 2core
 tags:
   - 99-terra-dev
 network:
-  segment: vlan-50
   mode: static
   address: 192.168.50.201/24
   gateway: 192.168.50.1

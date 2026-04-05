@@ -6,7 +6,6 @@ name: vm-template
 node: pve
 tags: []
 network:
-  segment: vlan-17
   mode: static
   address: 192.168.17.80/24
   gateway: 192.168.17.1

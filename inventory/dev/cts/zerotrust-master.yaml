@@ -8,7 +8,6 @@ node: 4core
 tags:
   - 99-terra-dev
 network:
-  segment: vlan-50
   mode: static
   address: 192.168.50.122/24
   gateway: 192.168.50.1

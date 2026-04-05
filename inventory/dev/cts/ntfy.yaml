@@ -8,7 +8,6 @@ node: 2core
 tags:
   - 99-terra-dev
 network:
-  segment: vlan-99
   mode: dhcp
 resources:
   cpu_cores: 1
