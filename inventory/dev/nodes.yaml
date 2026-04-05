@@ -8,5 +8,7 @@ nodes:
     role: compute
   n100:
     role: compute
+  6core:
+    role: compute
   nas:
     role: compute

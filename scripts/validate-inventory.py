@@ -393,11 +393,11 @@ def validate_common_workload(
             expect_type(tag, str, f"{context}.tags[{index}]", errors)
 
     network = require_mapping(workload.get("network", {}), f"{context}.network", errors)
-    for key in ("segment", "mode"):
-        if key not in network:
-            append_error(errors, f"{context}.network", f"missing required field `{key}`")
-    segment = network.get("segment")
-    if isinstance(segment, str) and segment not in networks:
+    if "mode" not in network:
+        append_error(errors, f"{context}.network", "missing required field `mode`")
+    # segment is optional; only validate the reference when both segment and networks are non-empty
+    segment = network.get("segment", "")
+    if segment and networks and segment not in networks:
         append_error(errors, context, f"references unknown network segment `{segment}`")
     mode = network.get("mode")
     if mode not in {"static", "dhcp"}:

@@ -428,7 +428,20 @@ class Handler(BaseHTTPRequestHandler):
                 document = load_environment_document(REPO_ROOT, environment)
                 drafts = runtime.load_drafts(REPO_ROOT, environment)
                 candidate = apply_drafts_to_document(document, _upsert_draft(drafts, draft))
-                errors = validate_document(REPO_ROOT, candidate, environment)
+                all_errors = validate_document(REPO_ROOT, candidate, environment)
+                # Only surface errors relevant to the workload being validated, plus
+                # environment-level errors (not attributed to any specific workload).
+                name = str((draft.get("workload") or {}).get("name") or draft.get("name") or "")
+                kind = str(draft.get("kind") or "")
+                plural = "cts" if kind == "ct" else "vms"
+                workload_prefix = f"{environment}.{plural}.{name}"
+                other_ct_pfx = f"{environment}.cts."
+                other_vm_pfx = f"{environment}.vms."
+                errors = [
+                    e for e in all_errors
+                    if e.startswith(workload_prefix)
+                    or (not e.startswith(other_ct_pfx) and not e.startswith(other_vm_pfx))
+                ]
                 _json(self, HTTPStatus.OK, {"valid": not errors, "errors": errors})
                 return
 
