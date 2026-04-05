@@ -331,6 +331,11 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 _json(self, HTTPStatus.OK, {"node": node, "storage": storage, "templates": list_node_templates(credentials, node, storage)})
                 return
+            if parsed.path == "/api/networks":
+                environment = _get_environment(self)
+                document = load_environment_document(REPO_ROOT, environment)
+                _json(self, HTTPStatus.OK, {"environment": environment, "networks": document.get("networks", {})})
+                return
             if parsed.path == "/api/apps/list":
                 _json(self, HTTPStatus.OK, {"apps": _list_apps(REPO_ROOT)})
                 return
