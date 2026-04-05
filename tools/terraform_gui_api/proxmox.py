@@ -71,9 +71,7 @@ TFVARS_FIELDS = [
     "proxmox_password",
     "proxmox_tls_insecure",
     "root_password",
-    "default_lxc_template",
     "network_bridge",
-    "ssh_public_keys",
     "default_search_domain",
     "proxmox_ssh_private_key_path",
 ]
@@ -329,3 +327,19 @@ def set_workload_status(
     resource_kind = "lxc" if kind == "ct" else "qemu"
     quoted_node = urllib.parse.quote(node, safe="")
     return api_request(credentials, "POST", f"/nodes/{quoted_node}/{resource_kind}/{vmid}/status/{action}")
+
+
+def list_bridges(credentials: ProxmoxCredentials) -> list[str]:
+    """Return sorted unique bridge interface names across all Proxmox nodes."""
+    nodes = list_nodes(credentials)
+    bridges: set[str] = set()
+    for node_info in nodes:
+        quoted_node = urllib.parse.quote(node_info["node"], safe="")
+        try:
+            response = api_request(credentials, "GET", f"/nodes/{quoted_node}/network")
+            for iface in response.get("data", []):
+                if isinstance(iface, dict) and iface.get("type") == "bridge" and iface.get("iface"):
+                    bridges.add(iface["iface"])
+        except Exception:
+            pass
+    return sorted(bridges)

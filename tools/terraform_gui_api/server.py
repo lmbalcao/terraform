@@ -28,6 +28,7 @@ from .inventory import (
 from .proxmox import (
     TFVARS_FIELDS,
     get_real_workload_detail,
+    list_bridges,
     list_nodes,
     list_node_storages,
     list_node_templates,
@@ -305,6 +306,17 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as exc:
                     # Live API failed — fall back to inventory-only nodes
                     _json(self, HTTPStatus.OK, {"nodes": inv_nodes, "warning": str(exc)})
+                return
+            if parsed.path == "/api/proxmox/bridges":
+                environment = _get_environment(self)
+                credentials, error = load_proxmox_credentials(REPO_ROOT, environment)
+                if credentials is None:
+                    _json(self, HTTPStatus.OK, {"bridges": [], "warning": error})
+                    return
+                try:
+                    _json(self, HTTPStatus.OK, {"bridges": list_bridges(credentials)})
+                except Exception as exc:
+                    _json(self, HTTPStatus.OK, {"bridges": [], "warning": str(exc)})
                 return
             if parsed.path == "/api/proxmox/storages":
                 environment = _get_environment(self)
