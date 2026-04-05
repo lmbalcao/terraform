@@ -163,9 +163,17 @@ def _make_context(tls_insecure: bool) -> ssl.SSLContext | None:
     return context
 
 
+def _api_base(api_url: str) -> str:
+    """Return the Proxmox REST API base URL, ensuring the /api2/json prefix is present."""
+    base = api_url.rstrip("/")
+    if not base.endswith("/api2/json"):
+        base = f"{base}/api2/json"
+    return base
+
+
 def _get_ticket(credentials: ProxmoxCredentials) -> tuple[str, str]:
     """Authenticate with root@pam password and return (ticket, csrf_token)."""
-    url = f"{credentials.api_url.rstrip('/')}/access/ticket"
+    url = f"{_api_base(credentials.api_url)}/access/ticket"
     payload = urllib.parse.urlencode({
         "username": "root@pam",
         "password": credentials.password,
@@ -197,7 +205,7 @@ def api_request(
     data: dict[str, str] | None = None,
 ) -> Any:
     ticket, csrf_token = _get_ticket(credentials)
-    url = f"{credentials.api_url.rstrip('/')}/{path.lstrip('/')}"
+    url = f"{_api_base(credentials.api_url)}/{path.lstrip('/')}"
     headers = {
         "Cookie": f"PVEAuthCookie={ticket}",
     }
