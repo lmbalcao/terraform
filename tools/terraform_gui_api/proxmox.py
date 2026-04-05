@@ -54,9 +54,75 @@ def _parse_tfvars(path: Path) -> dict[str, Any]:
             values[key] = int(value_text)
         elif value_text.startswith('"') and value_text.endswith('"'):
             values[key] = json.loads(value_text)
+        elif value_text.startswith("[") and value_text.endswith("]"):
+            try:
+                # HCL inline list is valid JSON when items are double-quoted strings
+                values[key] = json.loads(value_text)
+            except json.JSONDecodeError:
+                values[key] = value_text
         else:
             values[key] = value_text
     return values
+
+
+# Fields exposed for editing through the GUI (in display order).
+TFVARS_FIELDS = [
+    "proxmox_api_url",
+    "proxmox_password",
+    "proxmox_tls_insecure",
+    "root_password",
+    "default_lxc_template",
+    "network_bridge",
+    "ssh_public_keys",
+    "default_search_domain",
+    "proxmox_ssh_private_key_path",
+]
+
+
+def load_proxmox_tfvars(repo_root: Path, environment: str) -> dict[str, Any]:
+    """Return the full contents of proxmox-base.tfvars for display/editing."""
+    env_dir = repo_root / "env" / environment
+    for path in (env_dir / "proxmox-base.tfvars", env_dir / "proxmox-base.tfvars.json"):
+        if path.exists():
+            return _parse_tfvars(path)
+    return {}
+
+
+def write_proxmox_tfvars(repo_root: Path, environment: str, values: dict[str, Any]) -> None:
+    """Serialise *values* back to env/{environment}/proxmox-base.tfvars (HCL format)."""
+    path = repo_root / "env" / environment / "proxmox-base.tfvars"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = []
+    for key in TFVARS_FIELDS:
+        if key not in values:
+            continue
+        value = values[key]
+        if value is None or value == "":
+            continue
+        if isinstance(value, bool):
+            lines.append(f"{key} = {'true' if value else 'false'}")
+        elif isinstance(value, int):
+            lines.append(f"{key} = {value}")
+        elif isinstance(value, list):
+            items = ", ".join(f'"{v}"' for v in value if v)
+            lines.append(f"{key} = [{items}]")
+        else:
+            lines.append(f'{key} = "{value}"')
+    # Preserve any keys not in TFVARS_FIELDS that were already in the file
+    existing = _parse_tfvars(path) if path.exists() else {}
+    for key, value in existing.items():
+        if key in TFVARS_FIELDS or key in values:
+            continue
+        if isinstance(value, bool):
+            lines.append(f"{key} = {'true' if value else 'false'}")
+        elif isinstance(value, int):
+            lines.append(f"{key} = {value}")
+        elif isinstance(value, list):
+            items = ", ".join(f'"{v}"' for v in value if v)
+            lines.append(f"{key} = [{items}]")
+        else:
+            lines.append(f'{key} = "{value}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def load_proxmox_credentials(repo_root: Path, environment: str) -> tuple[ProxmoxCredentials | None, str | None]:

@@ -26,13 +26,16 @@ from .inventory import (
     write_workload_file,
 )
 from .proxmox import (
+    TFVARS_FIELDS,
     get_real_workload_detail,
     list_nodes,
     list_node_storages,
     list_node_templates,
     list_real_workloads,
     load_proxmox_credentials,
+    load_proxmox_tfvars,
     set_workload_status,
+    write_proxmox_tfvars,
 )
 from .terraform_ops import run_apply, run_plan
 
@@ -350,6 +353,11 @@ class Handler(BaseHTTPRequestHandler):
                 payload["branch"] = git_current_branch(REPO_ROOT)
                 _json(self, HTTPStatus.OK, payload)
                 return
+            if parsed.path == "/api/settings/tfvars":
+                environment = _get_environment(self)
+                values = load_proxmox_tfvars(REPO_ROOT, environment)
+                _json(self, HTTPStatus.OK, {"environment": environment, "fields": TFVARS_FIELDS, "values": values})
+                return
 
             _json(self, HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {parsed.path}"})
         except (Exception, SystemExit) as exc:
@@ -518,6 +526,16 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 result = run_apply(REPO_ROOT, environment)
                 _json(self, HTTPStatus.OK, result)
+                return
+
+            if parsed.path == "/api/settings/tfvars":
+                values = body.get("values")
+                if not isinstance(values, dict):
+                    _json(self, HTTPStatus.BAD_REQUEST, {"error": "Missing `values` object."})
+                    return
+                write_proxmox_tfvars(REPO_ROOT, environment, values)
+                saved = load_proxmox_tfvars(REPO_ROOT, environment)
+                _json(self, HTTPStatus.OK, {"saved": True, "environment": environment, "values": saved})
                 return
 
             _json(self, HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {parsed.path}"})
