@@ -74,6 +74,7 @@ TFVARS_FIELDS = [
     "network_bridge",
     "default_search_domain",
     "proxmox_ssh_private_key_path",
+    "ssh_public_keys",
 ]
 
 
