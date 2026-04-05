@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.9.0] - 2026-04-05
+## [v2.10.0] - 2026-04-05
 
-- feat: add GET /api/traefik-instances endpoint
+- feat: add GET /api/terraform-pubkey endpoint
 
 ## [v2.0.11] - 2026-03-23
 
