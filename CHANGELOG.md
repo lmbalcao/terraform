@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.0] - 2026-04-05
+## [v2.12.1] - 2026-04-05
 
-- feat: adicionar ssh_public_keys a TFVARS_FIELDS
+- fix: segment opcional, filtro validate por workload, adicionar 6core
 
 ## [v2.0.11] - 2026-03-23
 
