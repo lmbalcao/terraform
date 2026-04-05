@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.1] - 2026-04-05
+## [v2.12.2] - 2026-04-05
 
-- fix: segment opcional, filtro validate por workload, adicionar 6core
+- fix: handle null segment in ct/vm unknown-segment validation
 
 ## [v2.0.11] - 2026-03-23
 
