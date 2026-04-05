@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.8.2] - 2026-04-05
+## [v2.8.3] - 2026-04-05
 
-- feat(terraform-gui-api): editar variáveis Terraform via GUI (proxmox-base.tfvars)
+- fix(proxmox-api): adicionar /api2/json ao URL base em todas as chamadas API
 
 ## [v2.0.11] - 2026-03-23
 
