@@ -490,6 +490,11 @@ class Handler(BaseHTTPRequestHandler):
                 _json(self, HTTPStatus.OK, {"environment": environment, "drafts": drafts})
                 return
 
+            if parsed.path == "/api/drafts/clear":
+                runtime.save_drafts(REPO_ROOT, environment, [])
+                _json(self, HTTPStatus.OK, {"environment": environment, "drafts": []})
+                return
+
             if parsed.path == "/api/workloads/save":
                 drafts = runtime.load_drafts(REPO_ROOT, environment)
                 document = load_environment_document(REPO_ROOT, environment)
