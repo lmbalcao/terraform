@@ -11,18 +11,18 @@ lxc:
   mounts:
     - mp: /mnt/data
       slot: 0
-      storage: /mnt/pve/nas1/data/dev/teste2
+      storage: /mnt/pve/nas1/data/dev/testefixo
   template: local:vztmpl/debian-11-standard_11.7-1_amd64.tar.zst
   unprivileged: true
 name: testefixo
 network:
-  address: 192.168.60.123/24
+  address: 192.168.17.123/24
   dns_domain: lbtec.org
   dns_servers:
-    - 192.168.60.1
-  gateway: 192.168.60.1
+    - 192.168.17.1
+  gateway: 192.168.17.1
   mode: static
-  segment: public
+  segment: internal
 node: 6core
 operations:
   ansible_enabled: false
@@ -35,10 +35,16 @@ resources:
   cpu_cores: 1
   memory_mb: 512
   swap_mb: 1024
-services: []
+services:
+  - name: rdtclient
+    port: 6500
+    scheme: http
+    traefik_label: testefixo
+    traefik_tag: traefik-int
+    uri: testefixo.lbtec.org
 storage:
   rootfs_size_gb: 1
-  rootfs_storage: ceph-rbd
+  rootfs_storage: local
 tags:
   - testefixo
 version: 1

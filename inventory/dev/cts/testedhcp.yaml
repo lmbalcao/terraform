@@ -16,6 +16,9 @@ lxc:
   unprivileged: true
 name: testedhcp
 network:
+  dns_domain: lbtec.org
+  dns_servers:
+    - 192.168.17.1
   mode: dhcp
   segment: internal
 node: 6core
@@ -34,9 +37,9 @@ services:
   - name: rdtclient
     port: 6500
     scheme: http
-    traefik_label: rdtclient
+    traefik_label: testedhcp
     traefik_tag: traefik-int
-    uri: testerdt.lbtec.org
+    uri: testedhcp.lbtec.org
 storage:
   rootfs_size_gb: 4
   rootfs_storage: local
