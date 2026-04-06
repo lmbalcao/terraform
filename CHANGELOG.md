@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.5] - 2026-04-06
+## [v2.12.6] - 2026-04-06
 
-- feat(networks): definir segmento 'public' em dev/networks.yaml
+- fix(inventory): atualizar CT de teste + definir segmento 'internal'
 
 ## [v2.0.11] - 2026-03-23
 
