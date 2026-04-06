@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.6] - 2026-04-06
+## [v2.12.7] - 2026-04-06
 
-- fix(inventory): atualizar CT de teste + definir segmento 'internal'
+- fix(validate): networks passado como dict em vez de set a validate_*_workload
 
 ## [v2.0.11] - 2026-03-23
 
