@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.7] - 2026-04-06
+## [v2.12.8] - 2026-04-06
 
-- fix(validate): networks passado como dict em vez de set a validate_*_workload
+- fix(inventory): limpar workload antes de escrever YAML no disco
 
 ## [v2.0.11] - 2026-03-23
 
