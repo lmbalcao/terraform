@@ -467,6 +467,23 @@ def dump_yaml(value: Any, indent: int = 0) -> list[str]:
     return [prefix + yaml_scalar(value)]
 
 
+def _clean_workload(workload: dict[str, Any]) -> dict[str, Any]:
+    """Remove kind-specific blocks that don't belong to this workload type,
+    and strip null/empty segment to avoid writing 'segment: null' to YAML."""
+    cleaned = dict(workload)
+    kind = cleaned.get("kind")
+    if kind == "ct":
+        cleaned.pop("qemu", None)
+    elif kind == "vm":
+        cleaned.pop("lxc", None)
+    network = cleaned.get("network")
+    if isinstance(network, dict) and network.get("segment") is None:
+        network = dict(network)
+        network.pop("segment", None)
+        cleaned["network"] = network
+    return cleaned
+
+
 def write_workload_file(path: Path, workload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(dump_yaml(workload)) + "\n", encoding="utf-8")
+    path.write_text("\n".join(dump_yaml(_clean_workload(workload))) + "\n", encoding="utf-8")
