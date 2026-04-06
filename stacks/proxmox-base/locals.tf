@@ -22,8 +22,8 @@ locals {
   vm_documents = [for rel in local.vm_files : yamldecode(file("${local.inventory_env_dir}/${rel}"))]
 
   defaults = try(local.defaults_document.defaults, {})
-  nodes    = try(local.nodes_document.nodes, {})
-  networks = try(local.networks_document.networks, {})
+  nodes    = try(tomap(local.nodes_document.nodes), {})
+  networks = try(tomap(local.networks_document.networks), {})
 
   raw_cts = { for doc in local.ct_documents : doc.name => doc }
   raw_vms = { for doc in local.vm_documents : doc.name => doc }
