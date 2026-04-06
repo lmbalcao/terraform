@@ -347,7 +347,7 @@ def validate_common_workload(
     workload: dict[str, Any],
     context: str,
     nodes: set[str],
-    networks: set[str],
+    networks: dict[str, Any],
     traefik_instances: set[str],
     uri_owners: dict[str, str],
     uri_tags: dict[str, str],
@@ -460,7 +460,7 @@ def validate_ct_workload(
     workload: dict[str, Any],
     context: str,
     nodes: set[str],
-    networks: set[str],
+    networks: dict[str, Any],
     traefik_instances: set[str],
     uri_owners: dict[str, str],
     uri_tags: dict[str, str],
@@ -542,7 +542,7 @@ def validate_vm_workload(
     workload: dict[str, Any],
     context: str,
     nodes: set[str],
-    networks: set[str],
+    networks: dict[str, Any],
     traefik_instances: set[str],
     uri_owners: dict[str, str],
     uri_tags: dict[str, str],
@@ -611,7 +611,6 @@ def validate_environment_document(document: dict[str, Any], environment: str) ->
             expect_type(instance_map["address"], str, f"{environment}.ingress.{tag}.address", errors)
 
     node_names = set(nodes.keys())
-    network_names = set(networks.keys())
     traefik_instance_names = set(ingress.keys())
     seen_vmids: dict[int, str] = {}
     uri_owners: dict[str, str] = {}
@@ -623,7 +622,7 @@ def validate_environment_document(document: dict[str, Any], environment: str) ->
             workload,
             context,
             node_names,
-            network_names,
+            networks,
             traefik_instance_names,
             uri_owners,
             uri_tags,
@@ -643,7 +642,7 @@ def validate_environment_document(document: dict[str, Any], environment: str) ->
             workload,
             context,
             node_names,
-            network_names,
+            networks,
             traefik_instance_names,
             uri_owners,
             uri_tags,
