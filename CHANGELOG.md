@@ -58,9 +58,9 @@ Regras de bump (Custom SemVer):
 
 ## [Unreleased]
 
-## [v2.12.9] - 2026-04-06
+## [v2.12.10] - 2026-04-06
 
-- fix(validate): version opcional, nodes/traefik só validados quando definidos
+- fix: handle null nodes/networks in locals.tf via tomap()
 
 ## [v2.0.11] - 2026-03-23
 
