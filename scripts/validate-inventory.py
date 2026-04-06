@@ -337,7 +337,7 @@ def validate_service(
         append_error(errors, context, "`traefik_tag`, `traefik_label` and `uri` must be defined together")
 
     traefik_tag = service_map.get("traefik_tag")
-    if has_traefik_tag and isinstance(traefik_tag, str) and traefik_tag not in traefik_instances:
+    if has_traefik_tag and isinstance(traefik_tag, str) and traefik_instances and traefik_tag not in traefik_instances:
         append_error(errors, context, f"references unknown traefik_tag `{traefik_tag}`")
 
     return service_map.get("uri"), traefik_tag
@@ -384,7 +384,7 @@ def validate_common_workload(
     if "node" in workload:
         expect_type(workload["node"], str, f"{context}.node", errors)
         node_name = workload["node"]
-        if isinstance(node_name, str) and node_name not in nodes:
+        if isinstance(node_name, str) and nodes and node_name not in nodes:
             append_error(errors, context, f"references unknown node `{node_name}`")
 
     tags = workload.get("tags", [])
@@ -589,14 +589,16 @@ def validate_environment_document(document: dict[str, Any], environment: str) ->
     networks_document = document["_documents"]["networks"]
     ingress_document = document["_documents"]["ingress"]
 
-    if defaults_document.get("version") != 1:
-        append_error(errors, environment, "defaults.yaml must declare version 1")
-    if nodes_document.get("version") != 1:
-        append_error(errors, environment, "nodes.yaml must declare version 1")
-    if networks_document.get("version") != 1:
-        append_error(errors, environment, "networks.yaml must declare version 1")
-    if ingress_document.get("version") != 1:
-        append_error(errors, environment, "ingress.yaml must declare version 1")
+    # version is optional; only error if explicitly declared with wrong value
+    for doc, name in (
+        (defaults_document, "defaults.yaml"),
+        (nodes_document, "nodes.yaml"),
+        (networks_document, "networks.yaml"),
+        (ingress_document, "ingress.yaml"),
+    ):
+        v = doc.get("version")
+        if v is not None and v != 1:
+            append_error(errors, environment, f"{name} must declare version 1")
 
     nodes = require_mapping(document.get("nodes", {}), f"{environment}.nodes", errors)
     networks = require_mapping(document.get("networks", {}), f"{environment}.networks", errors)
