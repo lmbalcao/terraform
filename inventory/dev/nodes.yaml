@@ -1,1 +1,7 @@
 version: 1
+nodes:
+  4core: {}
+  n100: {}
+  6core: {}
+  2core: {}
+  nas: {}

@@ -1,1 +1,18 @@
 version: 1
+networks:
+  internal:
+    bridge: vmbr0
+    vlan: 17
+    gateway: 192.168.17.1
+    dns_server: 192.168.17.1
+    dns_servers:
+      - 192.168.17.1
+    dns_domain: lbtec.org
+  management:
+    bridge: vmbr0
+    vlan: 20
+    gateway: 192.168.20.1
+    dns_server: 192.168.20.1
+    dns_servers:
+      - 192.168.20.1
+    dns_domain: lbtec.org
