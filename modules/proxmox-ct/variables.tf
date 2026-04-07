@@ -52,8 +52,8 @@ variable "memory_mb" {
   type        = number
   description = "Memory in MB."
   validation {
-    condition     = var.memory_mb >= 16
-    error_message = "memory_mb deve ser >= 16 MB (limite mínimo do provider bpg/proxmox)."
+    condition     = var.memory_mb > 0
+    error_message = "memory_mb deve ser > 0."
   }
 }
 
