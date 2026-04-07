@@ -51,10 +51,6 @@ variable "cores" {
 variable "memory_mb" {
   type        = number
   description = "Memory in MB."
-  validation {
-    condition     = var.memory_mb > 0
-    error_message = "memory_mb deve ser > 0."
-  }
 }
 
 variable "swap_mb" {
