@@ -9,7 +9,7 @@ resource "proxmox_virtual_environment_container" "this" {
 
   operating_system {
     template_file_id = var.ostemplate
-    type             = "unmanaged"
+    type             = "debian"
   }
 
   cpu {
@@ -88,7 +88,6 @@ resource "proxmox_virtual_environment_container" "this" {
 
   lifecycle {
     ignore_changes = [
-      operating_system,
       initialization,
       disk[0].datastore_id,
     ]
