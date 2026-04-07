@@ -1,1 +1,6 @@
 version: 1
+ingress:
+  traefik-int:
+    address: 192.168.30.200
+  traefik-ext:
+    address: 192.168.20.200

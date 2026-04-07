@@ -1,0 +1,50 @@
+version: 1
+kind: ct
+name: rdtclient
+hostname: rdtclient
+enabled: true
+vmid: null
+node: 6core
+tags:
+  - media
+network:
+  segment: internal
+  mode: dhcp
+  vlan: 17
+  gateway: 192.168.17.1
+  dns_servers:
+    - 192.168.17.1
+  dns_domain: lbtec.org
+resources:
+  cpu_cores: 2
+  memory_mb: 2048
+  swap_mb: 512
+boot:
+  on_boot: true
+  start: true
+storage:
+  rootfs_storage: ceph-rbd
+  rootfs_size_gb: 8
+lxc:
+  template: local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst
+  unprivileged: true
+  features:
+    nesting: true
+  features_manual: {}
+  mounts:
+    - slot: 0
+      mp: /mnt/data
+      storage: /mnt/pve/nas1/data/dev/rdtclient
+apps:
+  - rdtclient
+services:
+  - name: rdtclient
+    port: 6500
+    scheme: http
+    uri: rdtclient.lbtec.org
+    traefik_tag: traefik-int
+    traefik_label: rdtclient
+operations:
+  ansible_enabled: false
+  backup_policy: null
+  bootstrap_profile: null
