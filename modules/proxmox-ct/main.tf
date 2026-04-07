@@ -1,20 +1,20 @@
 resource "proxmox_lxc" "this" {
-  target_node  = var.target_node
-  vmid         = var.vmid
-  description  = var.description
-  tags         = length(var.tags) > 0 ? join(",", var.tags) : null
-  unprivileged = var.unprivileged
-  start        = var.start
-  onboot       = var.on_boot
-  ostemplate   = var.ostemplate
-  hostname     = var.hostname
-  password     = var.root_password
+  target_node     = var.target_node
+  vmid            = var.vmid
+  description     = var.description
+  tags            = length(var.tags) > 0 ? join(",", var.tags) : null
+  unprivileged    = var.unprivileged
+  start           = var.start
+  onboot          = var.on_boot
+  ostemplate      = var.ostemplate
+  hostname        = var.hostname
+  password        = var.root_password
   ssh_public_keys = length(var.ssh_public_keys) > 0 ? join("\n", var.ssh_public_keys) : null
-  nameserver   = var.nameserver
-  searchdomain = var.searchdomain
-  cores        = var.cores
-  memory       = var.memory_mb
-  swap         = var.swap_mb
+  nameserver      = var.nameserver
+  searchdomain    = var.searchdomain
+  cores           = var.cores
+  memory          = var.memory_mb
+  swap            = var.swap_mb
 
   rootfs {
     storage = var.rootfs_storage

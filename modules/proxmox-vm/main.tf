@@ -4,7 +4,6 @@ resource "proxmox_vm_qemu" "this" {
   name        = var.name
   desc        = var.description
   tags        = length(var.tags) > 0 ? join(",", var.tags) : null
-  vm_state    = var.vm_state
   onboot      = var.start_at_node_boot
   scsihw      = var.scsi_hardware
 
@@ -13,22 +12,17 @@ resource "proxmox_vm_qemu" "this" {
   cpu     = "host"
   memory  = var.memory_mb
 
-  disks {
-    scsi {
-      scsi0 {
-        disk {
-          storage  = var.rootfs_storage
-          size     = var.rootfs_size_gb
-          format   = "raw"
-          discard  = true
-          iothread = var.scsi_hardware == "virtio-scsi-single"
-        }
-      }
-    }
+  disk {
+    type     = "scsi"
+    slot     = 0
+    storage  = var.rootfs_storage
+    size     = "${var.rootfs_size_gb}G"
+    format   = "raw"
+    discard  = "on"
+    iothread = var.scsi_hardware == "virtio-scsi-single" ? 1 : 0
   }
 
   network {
-    id     = 0
     model  = "virtio"
     bridge = var.network_bridge
     tag    = try(var.network_tag > 0, false) ? var.network_tag : -1
@@ -45,13 +39,8 @@ resource "proxmox_vm_qemu" "this" {
     var.network_gateway
   )
 
-  dynamic "clone" {
-    for_each = var.source_clone != null ? [var.source_clone] : []
-    content {
-      vm_id     = clone.value
-      full      = true
-    }
-  }
+  clone      = var.source_clone
+  full_clone = var.source_clone != null ? true : null
 
   lifecycle {
     ignore_changes = [
@@ -60,6 +49,8 @@ resource "proxmox_vm_qemu" "this" {
       searchdomain,
       ciuser,
       cloudinit_cdrom_storage,
+      clone,
+      full_clone,
     ]
 
     precondition {
