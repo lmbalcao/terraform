@@ -1,17 +1,17 @@
 output "id" {
-  value = proxmox_virtual_environment_container.this.id
+  value = proxmox_lxc.this.id
 }
 
 output "vmid" {
-  value = proxmox_virtual_environment_container.this.vm_id
+  value = proxmox_lxc.this.vmid
 }
 
 output "hostname" {
-  value = proxmox_virtual_environment_container.this.initialization[0].hostname
+  value = proxmox_lxc.this.hostname
 }
 
 output "target_node" {
-  value = proxmox_virtual_environment_container.this.node_name
+  value = proxmox_lxc.this.target_node
 }
 
 output "ipv4_address" {

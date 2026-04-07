@@ -120,8 +120,8 @@ variable "rootfs_size_gb" {
 }
 
 variable "source_clone" {
-  type        = number
+  type        = string
   default     = null
   nullable    = true
-  description = "Optional Proxmox VM ID to clone from."
+  description = "Optional Proxmox VM name to clone from."
 }

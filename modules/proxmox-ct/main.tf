@@ -1,73 +1,44 @@
-resource "proxmox_virtual_environment_container" "this" {
-  node_name    = var.target_node
-  vm_id        = var.vmid
+resource "proxmox_lxc" "this" {
+  target_node  = var.target_node
+  vmid         = var.vmid
   description  = var.description
-  tags         = length(var.tags) > 0 ? var.tags : null
+  tags         = length(var.tags) > 0 ? join(",", var.tags) : null
   unprivileged = var.unprivileged
-  started      = var.start
-  start_on_boot = var.on_boot
+  start        = var.start
+  onboot       = var.on_boot
+  ostemplate   = var.ostemplate
+  hostname     = var.hostname
+  password     = var.root_password
+  ssh_public_keys = length(var.ssh_public_keys) > 0 ? join("\n", var.ssh_public_keys) : null
+  nameserver   = var.nameserver
+  searchdomain = var.searchdomain
+  cores        = var.cores
+  memory       = var.memory_mb
+  swap         = var.swap_mb
 
-  operating_system {
-    template_file_id = var.ostemplate
-    type             = "unmanaged"
+  rootfs {
+    storage = var.rootfs_storage
+    size    = "${var.rootfs_size_gb}G"
   }
 
-  cpu {
-    cores = var.cores
+  network {
+    name   = "eth0"
+    bridge = var.network_bridge
+    tag    = try(var.network_tag > 0, false) ? var.network_tag : null
+    ip     = var.network_mode == "dhcp" ? "dhcp" : var.network_ip_cidr
+    gw     = var.network_mode == "dhcp" ? null : var.network_gateway
   }
 
-  memory {
-    dedicated = var.memory_mb
-    swap      = var.swap_mb
-  }
-
-  disk {
-    datastore_id = var.rootfs_storage
-    size         = var.rootfs_size_gb
-  }
-
-  initialization {
-    hostname = var.hostname
-
-    dynamic "dns" {
-      for_each = var.nameserver != null || var.searchdomain != null ? [1] : []
-      content {
-        servers = var.nameserver != null ? [var.nameserver] : []
-        domain  = var.searchdomain
-      }
-    }
-
-    ip_config {
-      ipv4 {
-        address = var.network_mode == "dhcp" ? "dhcp" : var.network_ip_cidr
-        gateway = var.network_mode == "dhcp" ? null : var.network_gateway
-      }
-    }
-
-    user_account {
-      password = var.root_password
-      keys     = length(var.ssh_public_keys) > 0 ? var.ssh_public_keys : null
-    }
-  }
-
-  network_interface {
-    name    = "eth0"
-    bridge  = var.network_bridge
-    vlan_id = try(var.network_tag > 0, false) ? var.network_tag : null
-  }
-
-  dynamic "mount_point" {
-    for_each = var.mountpoints
+  dynamic "mountpoint" {
+    for_each = { for i, m in var.mountpoints : tostring(i) => m }
     content {
-      volume    = mount_point.value.volume
-      path      = mount_point.value.path
-      size      = try(mount_point.value.size, null)
-      backup    = try(mount_point.value.backup, null)
-      quota     = try(mount_point.value.quota, null)
-      replicate = try(mount_point.value.replicate, null)
-      shared    = try(mount_point.value.shared, null)
-      acl       = try(mount_point.value.acl, null)
-      read_only = try(mount_point.value.read_only, null)
+      key     = mountpoint.key
+      slot    = tonumber(mountpoint.key)
+      storage = mountpoint.value.volume
+      mp      = mountpoint.value.path
+      size    = try(mountpoint.value.size, "0T")
+      backup  = try(mountpoint.value.backup, false)
+      quota   = try(mountpoint.value.quota, false)
     }
   }
 
@@ -79,18 +50,17 @@ resource "proxmox_virtual_environment_container" "this" {
       try(var.features.mount, null) != null
     ) ? [var.features] : []
     content {
-      nesting = try(features.value.nesting, null)
-      keyctl  = try(features.value.keyctl, null)
-      fuse    = try(features.value.fuse, null)
-      mount   = try(features.value.mount, null) != null ? toset(split(";", features.value.mount)) : null
+      nesting = try(features.value.nesting, false)
+      keyctl  = try(features.value.keyctl, false)
+      fuse    = try(features.value.fuse, false)
+      mount   = try(features.value.mount, null)
     }
   }
 
   lifecycle {
     ignore_changes = [
-      operating_system,
-      initialization,
-      disk[0].datastore_id,
+      ostemplate,
+      rootfs,
     ]
 
     precondition {
