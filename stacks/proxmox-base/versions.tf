@@ -9,7 +9,7 @@ terraform {
 
     proxmox = {
       source  = "Telmate/proxmox"
-      version = "~> 3.0"
+      version = ">= 2.9.0"
     }
   }
 }
