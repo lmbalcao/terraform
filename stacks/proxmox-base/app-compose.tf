@@ -88,6 +88,7 @@ resource "terraform_data" "ct_app_paths" {
       WORKLOAD_KIND        = "ct"
       WORKLOAD_NAME        = each.key
       WORKLOAD_VMID        = tostring(module.cts[each.key].vmid)
+      WORKLOAD_TARGET_NODE = module.cts[each.key].target_node
       WORKLOAD_PATH_LINES  = local.workload_app_path_lines[each.key]
       PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective != null ? local.proxmox_ssh_host_effective : ""
       PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
