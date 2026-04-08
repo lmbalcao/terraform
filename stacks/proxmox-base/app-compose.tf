@@ -35,6 +35,7 @@ resource "terraform_data" "ct_declared_host_path" {
 
     environment = {
       HOST_PATHS           = each.value
+      HOST_PATH_UID        = "100000"
       PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective
       PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
       PROXMOX_SSH_USER     = var.proxmox_ssh_user
