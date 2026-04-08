@@ -38,11 +38,19 @@ run_ct_path_prepare() {
   fi
 
   if [[ -n "$workload_target_node" ]]; then
-    # CT may be on a different cluster node: jump through the main Proxmox host to the target node
-    ssh "${ct_ssh_opts[@]}" \
-      -J "${proxmox_target}:${PROXMOX_SSH_PORT:-22}" \
-      -o StrictHostKeyChecking=accept-new \
-      "root@${workload_target_node}" /bin/sh -s -- "$workload_vmid" "$path" "$uid" "$gid" <<'EOF'
+    # CT may be on a different cluster node: SSH to the main Proxmox host, then forward to the target
+    # node. Proxmox clusters configure root SSH between nodes automatically during join.
+    ssh "${ct_ssh_opts[@]}" -p "${PROXMOX_SSH_PORT:-22}" "$proxmox_target" \
+      sh -s -- "$workload_target_node" "$workload_vmid" "$path" "$uid" "$gid" <<'OUTER_EOF'
+set -eu
+target_node="$1"
+vmid="$2"
+path="$3"
+uid="$4"
+gid="$5"
+
+ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new "root@${target_node}" \
+  sh -s -- "$vmid" "$path" "$uid" "$gid" <<'INNER_EOF'
 set -eu
 vmid="$1"
 path="$2"
@@ -51,7 +59,8 @@ gid="$4"
 
 pct exec "$vmid" -- mkdir -p -- "$path"
 pct exec "$vmid" -- chown "${uid}:${gid}" -- "$path"
-EOF
+INNER_EOF
+OUTER_EOF
   else
     ssh "${ct_ssh_opts[@]}" -p "${PROXMOX_SSH_PORT:-22}" "$proxmox_target" /bin/sh -s -- "$workload_vmid" "$path" "$uid" "$gid" <<'EOF'
 set -eu
