@@ -14,6 +14,7 @@ locals {
   defaults_document = yamldecode(file("${local.inventory_env_dir}/defaults.yaml"))
   nodes_document    = yamldecode(file("${local.inventory_env_dir}/nodes.yaml"))
   networks_document = yamldecode(file("${local.inventory_env_dir}/networks.yaml"))
+  ingress_document  = yamldecode(file("${local.inventory_env_dir}/ingress.yaml"))
 
   ct_files = sort(fileset(local.inventory_env_dir, "cts/*.yaml"))
   vm_files = sort(fileset(local.inventory_env_dir, "vms/*.yaml"))
@@ -21,9 +22,10 @@ locals {
   ct_documents = [for rel in local.ct_files : yamldecode(file("${local.inventory_env_dir}/${rel}"))]
   vm_documents = [for rel in local.vm_files : yamldecode(file("${local.inventory_env_dir}/${rel}"))]
 
-  defaults = try(local.defaults_document.defaults, {})
-  nodes    = try(tomap(local.nodes_document.nodes), {})
-  networks = try(tomap(local.networks_document.networks), {})
+  defaults          = try(local.defaults_document.defaults, {})
+  nodes             = try(tomap(local.nodes_document.nodes), {})
+  networks          = try(tomap(local.networks_document.networks), {})
+  traefik_instances = try(tomap(local.ingress_document.traefik_instances), {})
 
   raw_cts = { for doc in local.ct_documents : doc.name => doc }
   raw_vms = { for doc in local.vm_documents : doc.name => doc }
@@ -159,7 +161,7 @@ locals {
 
   app_missing_local_compose_files = [
     for app in local.app_names : app
-    if local.docker_apps_root != null && !fileexists(local.app_compose_file_paths[app])
+    if local.docker_apps_root != null && !try(fileexists(local.app_compose_file_paths[app]), false)
   ]
 
   app_compose_documents = {
@@ -286,6 +288,38 @@ locals {
 
   ct_unknown_segments = [for name, ct in local.cts : name if try(ct.network.segment, null) != null && !contains(keys(local.networks), ct.network.segment)]
   vm_unknown_segments = [for name, vm in local.vms : name if try(vm.network.segment, null) != null && !contains(keys(local.networks), vm.network.segment)]
+
+  all_traefik_services = flatten(concat(
+    [for name, services in local.ct_traefik_services : services],
+    [for name, services in local.vm_traefik_services : services]
+  ))
+
+  uri_to_traefik_tags = {
+    for uri in distinct([for s in local.all_traefik_services : s.uri]) : uri => distinct([
+      for s in local.all_traefik_services : s.traefik_tag
+      if s.uri == uri
+    ])
+  }
+
+  conflicting_uris = [
+    for uri, tags in local.uri_to_traefik_tags : uri
+    if length(tags) > 1
+  ]
+
+  unknown_traefik_tags = distinct(flatten(concat(
+    [
+      for name, ct in local.cts : [
+        for service in try(ct.services, []) : try(service.traefik_tag, null)
+        if try(service.traefik_tag, null) != null && !contains(keys(local.traefik_instances), try(service.traefik_tag, ""))
+      ]
+    ],
+    [
+      for name, vm in local.vms : [
+        for service in try(vm.services, []) : try(service.traefik_tag, null)
+        if try(service.traefik_tag, null) != null && !contains(keys(local.traefik_instances), try(service.traefik_tag, ""))
+      ]
+    ]
+  )))
 
   ct_missing_templates = [
     for name, ct in local.cts : name
@@ -428,7 +462,7 @@ locals {
   ]))
 
   proxmox_ssh_host_effective = (
-    var.proxmox_ssh_host != null && trimspace(var.proxmox_ssh_host) != ""
+    var.proxmox_ssh_host != null && try(trimspace(var.proxmox_ssh_host), "") != ""
     ? trimspace(var.proxmox_ssh_host)
     : try(regex("https?://([^:/]+)", var.proxmox_api_url)[0], null)
   )
@@ -585,4 +619,24 @@ locals {
       ))
     )
   }
+
+  # Firewall intent: one entry per (workload, service) pair that has a valid traefik_tag.
+  # traefik_vlan is derived from the third octet of the Traefik instance address (192.168.{vlan}.x).
+  # workload_vlan is taken directly from the CT/VM network definition.
+  # Applied by the openwrt-dns stack via ensure-openwrt-firewall.py.
+  workload_firewall_rules = flatten([
+    for workload_name, workload in local.workloads : [
+      for service in try(workload.services, []) : {
+        workload_name   = workload_name
+        workload_kind   = workload.workload_kind
+        service_name    = try(service.name, null)
+        traefik_tag     = service.traefik_tag
+        traefik_address = local.traefik_instances[service.traefik_tag].address
+        traefik_vlan    = tonumber(split(".", local.traefik_instances[service.traefik_tag].address)[2])
+        workload_vlan   = try(workload.network.vlan, try(local.networks[workload.network.segment].vlan, null))
+        port            = service.port
+      }
+      if try(service.traefik_tag, null) != null && contains(keys(local.traefik_instances), try(service.traefik_tag, ""))
+    ]
+  ])
 }

@@ -52,6 +52,20 @@ check "static_networks_complete" {
   }
 }
 
+check "unique_uri_traefik_tags" {
+  assert {
+    condition     = length(local.conflicting_uris) == 0
+    error_message = format("Each URI must map to a single Traefik instance: %s", join(", ", local.conflicting_uris))
+  }
+}
+
+check "known_traefik_instances" {
+  assert {
+    condition     = length(local.unknown_traefik_tags) == 0
+    error_message = format("Unknown traefik_tag references found in services: %s. Add them to ingress.yaml.", join(", ", local.unknown_traefik_tags))
+  }
+}
+
 check "proxmox_credentials_declared" {
   assert {
     condition = alltrue([

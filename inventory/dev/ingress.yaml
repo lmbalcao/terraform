@@ -1,5 +1,5 @@
 version: 1
-ingress:
+traefik_instances:
   traefik-int:
     address: 192.168.30.200
   traefik-ext:
