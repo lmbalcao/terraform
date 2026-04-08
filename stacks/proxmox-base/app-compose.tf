@@ -59,7 +59,7 @@ check "vm_app_path_preparation_static_address" {
 
 check "vm_app_path_preparation_runner_configured" {
   assert {
-    condition     = length(local.vm_workloads_with_app_paths) == 0 || trimspace(coalesce(var.guest_ssh_private_key_path, "")) != ""
+    condition     = length(local.vm_workloads_with_app_paths) == 0 || (var.guest_ssh_private_key_path != null && trimspace(var.guest_ssh_private_key_path) != "")
     error_message = "VM workloads with apps require guest_ssh_private_key_path so terraform can prepare compose bind-mount paths over SSH."
   }
 }
@@ -96,7 +96,7 @@ resource "terraform_data" "ct_app_paths" {
       GUEST_SSH_HOST       = ""
       GUEST_SSH_PORT       = tostring(var.guest_ssh_port)
       GUEST_SSH_USER       = var.guest_ssh_user
-      GUEST_SSH_KEY_PATH   = coalesce(var.guest_ssh_private_key_path, "")
+      GUEST_SSH_KEY_PATH   = var.guest_ssh_private_key_path != null ? var.guest_ssh_private_key_path : ""
     }
   }
 }
@@ -134,7 +134,7 @@ resource "terraform_data" "vm_app_paths" {
       GUEST_SSH_HOST       = local.vm_workload_hosts[each.key]
       GUEST_SSH_PORT       = tostring(var.guest_ssh_port)
       GUEST_SSH_USER       = var.guest_ssh_user
-      GUEST_SSH_KEY_PATH   = coalesce(var.guest_ssh_private_key_path, "")
+      GUEST_SSH_KEY_PATH   = var.guest_ssh_private_key_path != null ? var.guest_ssh_private_key_path : ""
     }
   }
 }
