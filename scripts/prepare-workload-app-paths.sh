@@ -58,7 +58,8 @@ uid="$3"
 gid="$4"
 
 pct exec "$vmid" -- mkdir -p -- "$path"
-pct exec "$vmid" -- chown "${uid}:${gid}" -- "$path"
+pct exec "$vmid" -- chown "${uid}:${gid}" -- "$path" || \
+  echo "Warning: chown ${uid}:${gid} on ${path} skipped (bind mount may restrict ownership changes)" >&2
 INNER_EOF
 OUTER_EOF
   else
@@ -70,7 +71,8 @@ uid="$3"
 gid="$4"
 
 pct exec "$vmid" -- mkdir -p -- "$path"
-pct exec "$vmid" -- chown "${uid}:${gid}" -- "$path"
+pct exec "$vmid" -- chown "${uid}:${gid}" -- "$path" || \
+  echo "Warning: chown ${uid}:${gid} on ${path} skipped (bind mount may restrict ownership changes)" >&2
 EOF
   fi
 }
