@@ -124,6 +124,40 @@ def write_proxmox_tfvars(repo_root: Path, environment: str, values: dict[str, An
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+# Mapping: GUI field name → openwrt-dns.tfvars variable name
+_OPENWRT_GUI_TO_TFVAR: dict[str, str] = {
+    "openwrt_ip":       "openwrt_hostname",
+    "openwrt_user":     "openwrt_username",
+    "openwrt_password": "openwrt_password",
+}
+_OPENWRT_TFVAR_TO_GUI: dict[str, str] = {v: k for k, v in _OPENWRT_GUI_TO_TFVAR.items()}
+
+OPENWRT_FIELDS: list[str] = list(_OPENWRT_GUI_TO_TFVAR.keys())
+
+
+def load_openwrt_tfvars(repo_root: Path, environment: str) -> dict[str, Any]:
+    """Return openwrt-dns tfvars keyed by GUI names (openwrt_ip, openwrt_user, openwrt_password)."""
+    path = repo_root / "env" / environment / "openwrt-dns.tfvars"
+    if not path.exists():
+        return {}
+    raw = _parse_tfvars(path)
+    return {_OPENWRT_TFVAR_TO_GUI.get(k, k): v for k, v in raw.items()}
+
+
+def write_openwrt_tfvars(repo_root: Path, environment: str, values: dict[str, Any]) -> None:
+    """Serialise openwrt settings to env/{environment}/openwrt-dns.tfvars using terraform variable names."""
+    path = repo_root / "env" / environment / "openwrt-dns.tfvars"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = []
+    for gui_key in OPENWRT_FIELDS:
+        tfvar_key = _OPENWRT_GUI_TO_TFVAR[gui_key]
+        value = values.get(gui_key)
+        if value is None or value == "":
+            continue
+        lines.append(f'{tfvar_key} = "{value}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def load_proxmox_credentials(repo_root: Path, environment: str) -> tuple[ProxmoxCredentials | None, str | None]:
     env_dir = repo_root / "env" / environment
     candidates = [

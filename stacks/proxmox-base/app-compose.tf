@@ -103,6 +103,64 @@ resource "terraform_data" "ct_app_paths" {
   }
 }
 
+resource "terraform_data" "ct_docker_install" {
+  for_each = {
+    for name, ct in local.cts : name => ct
+    if length(try(ct.apps, [])) > 0 && local.proxmox_ssh_host_effective != null
+  }
+
+  depends_on = [module.cts]
+
+  triggers_replace = [
+    tostring(module.cts[each.key].id),
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = "${path.module}/../../scripts/install-docker-ct.sh"
+
+    environment = {
+      WORKLOAD_VMID        = tostring(module.cts[each.key].vmid)
+      WORKLOAD_TARGET_NODE = module.cts[each.key].target_node
+      PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective
+      PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
+      PROXMOX_SSH_USER     = var.proxmox_ssh_user
+      PROXMOX_SSH_KEY_PATH = coalesce(var.proxmox_ssh_private_key_path, "")
+    }
+  }
+}
+
+resource "terraform_data" "ct_compose_deploy" {
+  for_each = {
+    for pair in local.workload_app_pairs :
+    "${pair.workload_name}/${pair.app}" => pair
+    if pair.workload_kind == "ct" && local.proxmox_ssh_host_effective != null
+  }
+
+  depends_on = [terraform_data.ct_docker_install, terraform_data.ct_app_paths]
+
+  triggers_replace = [
+    tostring(module.cts[each.value.workload_name].id),
+    sha256(yamlencode(local.app_compose_documents[each.value.app])),
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = "${path.module}/../../scripts/deploy-compose-ct.sh"
+
+    environment = {
+      WORKLOAD_VMID        = tostring(module.cts[each.value.workload_name].vmid)
+      WORKLOAD_TARGET_NODE = module.cts[each.value.workload_name].target_node
+      PROXMOX_SSH_HOST     = local.proxmox_ssh_host_effective
+      PROXMOX_SSH_PORT     = tostring(var.proxmox_ssh_port)
+      PROXMOX_SSH_USER     = var.proxmox_ssh_user
+      PROXMOX_SSH_KEY_PATH = coalesce(var.proxmox_ssh_private_key_path, "")
+      APP_NAME             = each.value.app
+      APP_COMPOSE_B64      = base64encode(yamlencode(local.app_compose_documents[each.value.app]))
+    }
+  }
+}
+
 resource "terraform_data" "vm_app_paths" {
   for_each = local.vm_workloads_with_app_paths
 

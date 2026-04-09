@@ -35,8 +35,11 @@ from .proxmox import (
     list_real_workloads,
     load_proxmox_credentials,
     load_proxmox_tfvars,
+    load_openwrt_tfvars,
+    OPENWRT_FIELDS,
     set_workload_status,
     write_proxmox_tfvars,
+    write_openwrt_tfvars,
 )
 from .terraform_ops import run_apply, run_plan
 
@@ -393,6 +396,11 @@ class Handler(BaseHTTPRequestHandler):
                 values = load_proxmox_tfvars(REPO_ROOT, environment)
                 _json(self, HTTPStatus.OK, {"environment": environment, "fields": TFVARS_FIELDS, "values": values})
                 return
+            if parsed.path == "/api/settings/openwrt":
+                environment = _get_environment(self)
+                values = load_openwrt_tfvars(REPO_ROOT, environment)
+                _json(self, HTTPStatus.OK, {"environment": environment, "fields": OPENWRT_FIELDS, "values": values})
+                return
 
             _json(self, HTTPStatus.NOT_FOUND, {"error": f"Unknown path: {parsed.path}"})
         except (Exception, SystemExit) as exc:
@@ -588,6 +596,15 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 write_proxmox_tfvars(REPO_ROOT, environment, values)
                 saved = load_proxmox_tfvars(REPO_ROOT, environment)
+                _json(self, HTTPStatus.OK, {"saved": True, "environment": environment, "values": saved})
+                return
+            if parsed.path == "/api/settings/openwrt":
+                values = body.get("values")
+                if not isinstance(values, dict):
+                    _json(self, HTTPStatus.BAD_REQUEST, {"error": "Missing `values` object."})
+                    return
+                write_openwrt_tfvars(REPO_ROOT, environment, values)
+                saved = load_openwrt_tfvars(REPO_ROOT, environment)
                 _json(self, HTTPStatus.OK, {"saved": True, "environment": environment, "values": saved})
                 return
 
